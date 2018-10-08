@@ -11,10 +11,13 @@ class Main extends Component {
     constructor() {
         super()
 
+        this.minSize = 20
+        this.maxSize = 40
+
         this.state = {
             nextWidth: 15,
             nextHeight: 15,
-            size: 30,
+            size: this.maxSize,
             density: 0.6,
             solved: false
         }
@@ -42,7 +45,11 @@ class Main extends Component {
 
             boardSolution = boardSolution.map(row => row.map(cell => cell || 2))
 
-            this.setState({ width, height, boardState, boardSolution, solved: false })
+            let verticalHints = this.verticalHints(boardSolution)
+            let horizontalHints = this.horizontalHints(boardSolution)
+
+            this.setState({ width, height, boardState, boardSolution, verticalHints, horizontalHints, solved: false })
+            this.resize(horizontalHints)
         }
 
         this.resetBoard = () => {
@@ -85,14 +92,52 @@ class Main extends Component {
             if (isNaN(value)) return
             this.setState({ nextWidth: value, nextHeight: value })
         }
+
+        this.parseRow = (row) => {
+            let rowString = row.join('')
+            let simpleString = rowString.replace(/[02]+/g, '0').replace(/^0+/g, '').replace(/0+$/g, '')
+            let runs = simpleString.split('0')
+            let runCounts = runs.map(run => run.length)
+            runCounts = runCounts.filter(runCount => runCount > 0)
+            return runCounts
+        }
+
+        this.horizontalHints = (boardState) => {
+            return boardState.map(row => this.parseRow(row))
+        }
+
+        this.verticalHints = (boardState) => {
+            let width = boardState[0].length
+            let hints = []
+            for (let x = 0; x < width; x++) {
+                let column = boardState.map(row => row[x])
+                let parsedColumn = this.parseRow(column)
+                hints.push(parsedColumn)
+            }
+            return hints
+        }
+
+        this.resize = (horizontalHints) => {
+            let hints = this.state.horizontalHints || horizontalHints
+            let width = window.innerWidth
+            let maxHints = hints.reduce((prev, curr) => curr.length > prev ? curr.length : prev, 0)
+            let tiles = maxHints + this.state.width
+            let tileSize = Math.floor(width / (tiles + 1))
+            let size = Math.min(this.maxSize, Math.max(this.minSize, tileSize))
+            let boardWidth = tiles * size
+            this.setState({ size, boardWidth })
+        }
     }
 
     componentDidMount() {
+        window.onresize = this.resize
         this.setupBoard()
     }
 
-    render(_, { width, height, size, boardState, boardSolution, solved }) {
+    render(_, { width, height, size, boardState, boardWidth, verticalHints, horizontalHints, solved }) {
         let updateBoard = this.updateBoard
+
+        let title = h('h1', { style: { maxWidth: boardWidth } }, ['tomographical'])
 
         let sizeSelect = h('select', { onchange: this.changeDimensions }, [
             h('option', { value: 5, selected: width === 5 }, '5x5'),
@@ -104,11 +149,17 @@ class Main extends Component {
         let newButton = h('button', { type: 'button', onclick: this.setupBoard }, 'new')
         let resetButton = h('button', { type: 'button', onclick: this.resetBoard }, 'reset')
         let solveButton = h('button', { type: 'button', onclick: this.solve }, 'solve')
-        let controls = h('div', { class: 'button-row' }, [sizeSelect, newButton, resetButton, solveButton])
+        let controls = h('div', { class: 'button-row', style: { maxWidth: boardWidth } },
+            [sizeSelect, newButton, resetButton, solveButton]
+        )
 
-        let board = h(Board, { width, height, size, boardState, boardSolution, updateBoard })
+        let board = boardState && h('div', { class: 'board-container', style: { width: boardWidth } },
+            h(Board, { width, height, size, boardState, updateBoard, verticalHints, horizontalHints })
+        )
 
-        return h('div', { class: (solved && 'solved') }, [board, controls])
+        return h('div', { class: solved && 'solved' },
+            [board, title, controls]
+        )
     }
 }
 
@@ -116,46 +167,24 @@ class Board extends Component {
     constructor() {
         super()
 
-        let parseRow = (row) => {
-            let rowString = row.join('')
-            let simpleString = rowString.replace(/[02]+/g, '0').replace(/^0+/g, '').replace(/0+$/g, '')
-            let runs = simpleString.split('0')
-            let runCounts = runs.map(run => run.length)
-            runCounts = runCounts.filter(runCount => runCount > 0)
-            return runCounts
-        }
-
-        this.horizontalHints = (boardState) => {
-            return boardState.map(row => parseRow(row))
-        }
-
-        this.verticalHints = (boardState) => {
-            let width = boardState[0].length
-            let hints = []
-            for (let x = 0; x < width; x++) {
-                let column = boardState.map(row => row[x])
-                let parsedColumn = parseRow(column)
-                hints.push(parsedColumn)
-            }
-            return hints
-        }
-
         this.startX = null
         this.startY = null
         this.endX = null
         this.endY = null
 
-        this.startDrawing = (x, y) => {
+        this.startDrawing = (e, x, y) => {
+            e.preventDefault()
             this.startX = x
             this.startY = y
         }
 
-        this.moveDrawing = (x, y) => {
+        this.moveDrawing = (e, x, y) => {
             this.endX = x
             this.endY = y
         }
 
-        this.endDrawing = (x, y) => {
+        this.endDrawing = (e, x, y) => {
+            e.preventDefault()
             let value = this.props.boardState[this.startY][this.startX]
             let nextValue = value + 1
             if (nextValue > 2) nextValue = 0
@@ -187,31 +216,23 @@ class Board extends Component {
         }
     }
 
-    render({ width, height, size, boardState, boardSolution, updateBoard }) {
-        if (!boardState) return
-
-        let verticalHints = this.verticalHints(boardSolution)
-        let horizontalHints = this.horizontalHints(boardSolution)
-        let maxHints = horizontalHints.reduce((prev, curr) => curr.length > prev ? curr.length : prev, 0)
-        let hintWidth = maxHints * size
-        let boardWidth = hintWidth + (width * size)
-
+    render({ width, height, size, boardState, verticalHints, horizontalHints }) {
         let cell = (x, y) => {
             let value = boardState[y][x]
             return h('div', {
                 class: 'cell cell-' + value,
-                ontouchstart: () => this.startDrawing(x, y),
-                onmousedown: () => this.startDrawing(x, y),
-                ontouchend: () => this.endDrawing(x, y),
-                onmouseup: () => this.endDrawing(x, y),
-                ontouchmove: () => this.moveDrawing(x, y),
-                onmousemove: () => this.moveDrawing(x, y)
+                ontouchstart: (e) => this.startDrawing(e, x, y),
+                onmousedown: (e) => this.startDrawing(e, x, y),
+                ontouchend: (e) => this.endDrawing(e, x, y),
+                onmouseup: (e) => this.endDrawing(e, x, y),
+                ontouchmove: (e) => this.moveDrawing(e, x, y),
+                onmousemove: (e) => this.moveDrawing(e, x, y)
             })
         }
 
-        let table = h('table', { class: 'board' }, [
+        return h('table', { class: 'board' }, [
             h('tr', null, [
-                h('td', null, h('h1', null, ['tomo', h('br'), 'graph', h('br'), 'ical'])),
+                h('td'),
                 h('td', null, h(Hints, { size, isVertical: true, hints: verticalHints }))
             ]),
             h('tr', null, [
@@ -219,8 +240,6 @@ class Board extends Component {
                 h('td', null, h(Grid, { width, height, size, cell }))
             ])
         ])
-
-        return h('div', { class: 'table-container', style: { minWidth: boardWidth } }, table)
     }
 }
 

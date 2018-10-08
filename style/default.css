@@ -7,13 +7,17 @@ body {
     padding: 0;
     background: black;
     color: white;
+    font-size: 16px;
     font-family: Inconsolata, 'Courier New', Courier, monospace;
+    text-align: center;
 }
 
 h1 {
-    margin: 0;
-    padding: 10px 15px;
+    margin-top: 20px;
+    margin-right: 10px;
     color: white;
+    font-size: 200%;
+    text-align: right;
 }
 
 table, tr, td {
@@ -35,21 +39,11 @@ button::-moz-focus-inner {
     border: none;
 }
 
-.board > tr,
-.board > tr > td,
-.board > tr > td > .hints-container {
-    height: 100%;
-}
-
-.hints-horizontal {
-    width: 100%;
-}
-.hints-vertical {
-    height: 100%;
-}
-
 .hints td {
     border: 1px solid #444;
+}
+.solved .hints td {
+    border: none;
 }
 .hints-vertical td {
     border-top: none;
@@ -78,9 +72,18 @@ button::-moz-focus-inner {
     font-weight: bold;
     text-align: center;
 }
+.hint-complete {
+    color: #666;
+    font-weight: normal;
+}
+@media (max-width: 600px) {
+    .hint {
+        font-size: 12px;
+    }
+}
 
 .grid td {
-    border: 1px solid rgba(255,255,255,0.8);
+    border: 1px solid rgba(255,255,255,0.5);
 }
 .grid td:nth-child(5n):not(:last-child) {
     border-right-width: 2px;
@@ -126,14 +129,17 @@ button::-moz-focus-inner {
 }
 
 .button-row {
-    margin: 30px 5px;
+    margin-right: 10px;
+    text-align: right;
 }
 .button-row button,
 .button-row select {
     height: 40px;
-    margin: 5px;
+    margin-top: 10px;
+    margin-left: 10px;
     padding: 0 20px;
     border: 1px solid #444;
+    border-radius: 0;
     background: none;
     color: white;
     font-weight: bold;
