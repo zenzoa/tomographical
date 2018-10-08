@@ -117,11 +117,12 @@ class Main extends Component {
             return hints
         }
 
+        // TODO: handle landscape style
         this.resize = (horizontalHints) => {
             let hints = this.state.horizontalHints || horizontalHints
             let width = window.innerWidth
             let maxHints = hints.reduce((prev, curr) => curr.length > prev ? curr.length : prev, 0)
-            let tiles = maxHints + this.state.width
+            let tiles = (maxHints * 0.67) + this.state.width
             let tileSize = Math.floor(width / (tiles + 1))
             let size = Math.min(this.maxSize, Math.max(this.minSize, tileSize))
             let boardWidth = tiles * size
@@ -178,6 +179,7 @@ class Board extends Component {
             this.startY = y
         }
 
+        // TODO: show in-progress drawing
         this.moveDrawing = (e, x, y) => {
             this.endX = x
             this.endY = y
@@ -247,10 +249,12 @@ class Hints extends Component {
     render({ size, isVertical, hints }) {
         let contents
 
+        let innerSize = Math.floor(Math.max(12, size * 0.67))
+
         if (isVertical) {
             contents = h('tr', null, hints.map(hintGroup =>
                 h('td', { style: { width: size + 'px' } }, hintGroup.map(hint =>
-                    h('div', { class: 'hint', style: { height: size + 'px' } }, hint)
+                    h('div', { class: 'hint', style: { height: innerSize + 'px' } }, hint)
                 ))
             ))
             hints.map(hintGroup => {
@@ -259,7 +263,7 @@ class Hints extends Component {
         } else {
             contents = hints.map(hintGroup =>
                 h('tr', null, h('td', { style: { height: size + 'px' } }, hintGroup.map(hint =>
-                    h('div', { class: 'hint', style: { width: size + 'px' } }, hint)
+                    h('div', { class: 'hint', style: { width: innerSize + 'px' } }, hint)
                 )))
             )
         }
