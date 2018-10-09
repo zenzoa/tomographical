@@ -45,44 +45,46 @@ button::-moz-focus-inner {
 .solved .hints td {
     border: none;
 }
-.hints-vertical td {
+.hints-col td {
     border-top: none;
     border-bottom: none;
     vertical-align: bottom;
 }
-.hints-vertical td :first-child {
+.hints-col td :first-child {
     margin-top: 5px;
 }
-.hints-vertical td:nth-child(5n):not(:last-child) {
+.hints-col td:nth-child(5n):not(:last-child) {
     border-right-width: 2px;
 }
-.hints-horizontal td {
+.hints-row td {
     border-left: none;
     border-right: none;
     text-align: right;
     vertical-align: middle;
 }
-.hints-horizontal tr:nth-child(5n):not(:last-child) td {
+.hints-row tr:nth-child(5n):not(:last-child) td {
     border-bottom-width: 2px;
 }
-.hints-horizontal .hint {
+.hints-row .hint {
     display: inline-block;
 }
 .hint {
     font-weight: bold;
     text-align: center;
 }
-.hint-complete {
+.solved .hint,
+.hint-completed {
     color: #666;
     font-weight: normal;
 }
-@media (max-width: 600px) {
+@media (max-width: 600px), (max-height: 800px) {
     .hint {
         font-size: 12px;
     }
 }
 
 .grid td {
+    position: relative;
     border: 1px solid black;
 }
 .grid td:nth-child(5n):not(:last-child) {
@@ -92,24 +94,7 @@ button::-moz-focus-inner {
     border-bottom-width: 2px;
 }
 .solved .grid td {
-    border: none;
-}
-
-.cell-button {
-    display: block;
-    width: 100%;
-    height: 100%;
-    border: none;
-    cursor: pointer;
-}
-.cell-button-0 {
-    background: white;
-}
-.cell-button-1 {
-    background: none;
-}
-.cell-button-2 {
-    background: black;
+    border: 1px solid rgba(255,255,255,0.5) !important;
 }
 
 .cell {
@@ -126,6 +111,28 @@ button::-moz-focus-inner {
 }
 .cell-2 {
     background: black;
+}
+.cell-2:after {
+    content: '🞨';
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    width: 100%; height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ccc;
+    font-size: 20px;
+}
+.solved .cell-2:after {
+    display: none;
+}
+.cell-temp:after {
+    content: '';
+    display: block;
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.3);
 }
 
 .button-row {
@@ -161,4 +168,7 @@ button::-moz-focus-inner {
 }
 .button-row select + button {
     margin-left: 1px;
+}
+.button-row select option {
+    color: black;
 }

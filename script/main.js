@@ -45,18 +45,25 @@ class Main extends Component {
 
             boardSolution = boardSolution.map(row => row.map(cell => cell || 2))
 
-            let verticalHints = this.verticalHints(boardSolution)
-            let horizontalHints = this.horizontalHints(boardSolution)
+            let colHints = this.colHints(boardSolution)
+            let rowHints = this.rowHints(boardSolution)
 
-            this.setState({ width, height, boardState, boardSolution, verticalHints, horizontalHints, solved: false })
-            this.resize(horizontalHints)
+            let completedColHints = null
+            let completedRowHints = null
+
+            let gradient = this.gradient()
+
+            this.setState({ width, height, boardState, boardSolution, colHints, rowHints, gradient, completedColHints, completedRowHints, solved: false })
+            this.resize(colHints, rowHints)
         }
 
         this.resetBoard = () => {
             let width = this.state.width
             let height = this.state.height
             let boardState = Array(width).fill(0).map(() => Array(height).fill(0))
-            this.setState({ boardState, solved: false })
+            let completedColHints = null
+            let completedRowHints = null
+            this.setState({ boardState, completedColHints, completedRowHints, solved: false })
         }
 
         this.updateBoard = (x, y, value) => {
@@ -64,27 +71,59 @@ class Main extends Component {
 
             let boardState = this.state.boardState
             boardState[y][x] = value
-            this.setState({ boardState })
 
-            if (this.testSolution()) {
-                this.solve()
+            let colHints = this.colHints(this.state.boardSolution)
+            let rowHints = this.rowHints(this.state.boardSolution)
+
+            let colSequences = this.colSequences(boardState)
+            let rowSequences = this.rowSequences(boardState)
+
+            let completedColHints = this.completedHints(colHints, colSequences)
+            let completedRowHints = this.completedHints(rowHints, rowSequences)
+
+            this.setState({ boardState, colHints, rowHints, completedColHints, completedRowHints })
+
+            if (this.testSolution(boardState)) {
+                this.solve(boardState)
             }
         }
 
-        this.testSolution = () => {
-            for (let y = 0; y < this.state.height; y++) {
-                for (let x = 0; x < this.state.width; x++) {
-                    let value = this.state.boardState[y][x]
-                    let solution = this.state.boardSolution[y][x]
-                    if (solution === 1 && value !== 1) return false
-                    if (solution !== 1 && value === 1) return false
+        this.compareHints = (hints, solutionHints) => {
+            let ok = true
+
+            hints.forEach((hintGroup, i) => {
+                let solutionHintGroup = solutionHints[i]
+                if (hintGroup.length !== solutionHintGroup.length) {
+                    ok = false
+                } else {
+                    hintGroup.forEach((hint, j) => {
+                        let solutionHint = solutionHintGroup[j]
+                        if (hint !== solutionHint) {
+                            ok = false
+                        }
+                    })
                 }
-            }
-            return true
+            })
+
+            return ok
         }
 
-        this.solve = () => {
-            this.setState({ boardState: this.state.boardSolution, solved: true })
+        this.testSolution = (boardState) => {
+            boardState = boardState || this.state.boardState
+
+            let colHints = this.colHints(boardState)
+            let rowHints = this.rowHints(boardState)
+
+            let colOk = this.compareHints(colHints, this.state.colHints)
+            let rowOk = this.compareHints(rowHints, this.state.rowHints)
+
+            return colOk && rowOk
+        }
+
+        this.solve = (boardState) => {
+            boardState = boardState.map(row => row.map(cell => cell === 0 ? 2 : cell))
+
+            this.setState({ boardState, solved: true })
         }
 
         this.changeDimensions = (e) => {
@@ -97,36 +136,96 @@ class Main extends Component {
             let rowString = row.join('')
             let simpleString = rowString.replace(/[02]+/g, '0').replace(/^0+/g, '').replace(/0+$/g, '')
             let runs = simpleString.split('0')
-            let runCounts = runs.map(run => run.length)
-            runCounts = runCounts.filter(runCount => runCount > 0)
+            let runCounts = runs.map(r => r.length)
+            runCounts = runCounts.filter(c => c > 0)
             return runCounts
         }
 
-        this.horizontalHints = (boardState) => {
+        this.rowHints = (boardState) => {
             return boardState.map(row => this.parseRow(row))
         }
 
-        this.verticalHints = (boardState) => {
+        this.colHints = (boardState) => {
             let width = boardState[0].length
             let hints = []
             for (let x = 0; x < width; x++) {
                 let column = boardState.map(row => row[x])
-                let parsedColumn = this.parseRow(column)
-                hints.push(parsedColumn)
+                hints.push(this.parseRow(column))
             }
             return hints
         }
+        
+        this.completedHints = (hints, sequences) => {
+            let completedHints = sequences.map((sequenceGroup, i) => {
+                let completedHintsInRow = []
+                let hintString = hints[i].join('-')
+                sequenceGroup.forEach(sequence => {
+                    let seqString = sequence.join('-')
+                    let firstIndex = hintString.indexOf(seqString)
+                    let lastIndex = hintString.lastIndexOf(seqString)
+                    if (firstIndex >= 0 && firstIndex === lastIndex) {
+                        let partialString = hintString.slice(0, firstIndex)
+                        let partialArray = partialString.split('-')
+                        let hintIndex = partialArray.length - 1
+                        for (let i = 0; i < sequence.length; i++) {
+                            completedHintsInRow.push(hintIndex + i)
+                        }
+                    }
+                })
+                return completedHintsInRow
+            })
+            return completedHints
+        }
 
-        // TODO: handle landscape style
-        this.resize = (horizontalHints) => {
-            let hints = this.state.horizontalHints || horizontalHints
-            let width = window.innerWidth
-            let maxHints = hints.reduce((prev, curr) => curr.length > prev ? curr.length : prev, 0)
-            let tiles = (maxHints * 0.67) + this.state.width
-            let tileSize = Math.floor(width / (tiles + 1))
+        this.parseSequences = (row) => {
+            let rowString = '2' + row.join('') + '2'
+            let matches = rowString.match(/2[12]+2/g)
+            let sequences = matches && matches.map(match =>
+                match.split('2').map(s => s.length).filter(s => s > 0)
+            )
+            return sequences || []
+        }
+
+        this.rowSequences = (boardState) => {
+            return boardState.map(row => this.parseSequences(row))
+        }
+
+        this.colSequences = (boardState) => {
+            let width = boardState[0].length
+            let sequences = []
+            for (let x = 0; x < width; x++) {
+                let column = boardState.map(row => row[x])
+                sequences.push(this.parseSequences(column))
+            }
+            return sequences
+        }
+
+        this.resize = (colHints, rowHints) => {
+            colHints = this.state.colHints || colHints
+            rowHints = this.state.rowHints || rowHints
+
+            let maxColHints = colHints.reduce((prev, curr) => curr.length > prev ? curr.length : prev, 0)
+            let maxHoriztonalHints = rowHints.reduce((prev, curr) => curr.length > prev ? curr.length : prev, 0)
+
+            let colTiles = (maxColHints * 0.67) + this.state.height
+            let rowTiles = (maxHoriztonalHints * 0.67) + this.state.width
+
+            let tileWidth = Math.floor(window.innerWidth / (rowTiles + 1))
+            let tileHeight = Math.floor((window.innerHeight - 120) / (colTiles + 1))
+            let tileSize = Math.min(tileWidth, tileHeight)
+
             let size = Math.min(this.maxSize, Math.max(this.minSize, tileSize))
-            let boardWidth = tiles * size
+            let boardWidth = rowTiles * size
+
             this.setState({ size, boardWidth })
+        }
+
+        this.gradient = () => {
+            let color1 = chroma.random()
+            let color2 = chroma.random()
+            let color3 = chroma.random()
+            let angle = Math.floor(Math.random() * 360) + 'deg'
+            return `linear-gradient(${angle}, ${color1} 0%, ${color2} 50%, ${color3} 100%)`
         }
     }
 
@@ -135,7 +234,7 @@ class Main extends Component {
         this.setupBoard()
     }
 
-    render(_, { width, height, size, boardState, boardWidth, verticalHints, horizontalHints, solved }) {
+    render(_, { width, height, size, boardState, boardSolution, boardWidth, colHints, rowHints, completedColHints, completedRowHints, gradient, solved }) {
         let updateBoard = this.updateBoard
 
         let title = h('h1', { style: { maxWidth: boardWidth } }, ['tomographical'])
@@ -149,13 +248,13 @@ class Main extends Component {
         ])
         let newButton = h('button', { type: 'button', onclick: this.setupBoard }, 'new')
         let resetButton = h('button', { type: 'button', onclick: this.resetBoard }, 'reset')
-        let solveButton = h('button', { type: 'button', onclick: this.solve }, 'solve')
+        let solveButton = h('button', { type: 'button', onclick: () => this.solve(boardSolution) }, 'solve')
         let controls = h('div', { class: 'button-row', style: { maxWidth: boardWidth } },
             [sizeSelect, newButton, resetButton, solveButton]
         )
 
         let board = boardState && h('div', { class: 'board-container', style: { width: boardWidth } },
-            h(Board, { width, height, size, boardState, updateBoard, verticalHints, horizontalHints })
+            h(Board, { width, height, size, boardState, updateBoard, colHints, rowHints, completedColHints, completedRowHints, gradient })
         )
 
         return h('div', { class: solved && 'solved' },
@@ -168,6 +267,11 @@ class Board extends Component {
     constructor() {
         super()
 
+        this.state = {
+            tempValue: 0,
+            tempCells: []
+        }
+
         this.startX = null
         this.startY = null
         this.endX = null
@@ -179,16 +283,36 @@ class Board extends Component {
             this.startY = y
         }
 
-        // TODO: show in-progress drawing
         this.moveDrawing = (e, x, y) => {
+            if (this.startX == null || this.startY == null) return
+
             this.endX = x
             this.endY = y
+
+            let tempCells = []
+            if (x === this.startX && y === this.startY) {
+                tempCells = [[this.startX, this.startY]]
+            } else if (x === this.startX) {
+                let minY = Math.min(y, this.startY)
+                let maxY = Math.max(y, this.startY)
+                for (let i = minY; i <= maxY; i++) {
+                    tempCells.push([x, i])
+                }
+            } else if (y === this.startY) {
+                let minX = Math.min(x, this.startX)
+                let maxX = Math.max(x, this.startX)
+                for (let i = minX; i <= maxX; i++) {
+                    tempCells.push([i, y])
+                }
+            }
+            this.setState({ tempCells })
         }
 
         this.endDrawing = (e, x, y) => {
             e.preventDefault()
-            let value = this.props.boardState[this.startY][this.startX]
-            let nextValue = value + 1
+            if (this.startX == null || this.startY == null) return
+
+            let nextValue = 1 + this.props.boardState[this.startY][this.startX]
             if (nextValue > 2) nextValue = 0
 
             if (x === this.startX && y === this.startY) {
@@ -207,10 +331,28 @@ class Board extends Component {
                 }
             }
 
+            this.resetDraw()
+        }
+
+        this.moveOutsideGrid = (e) => {
+            e.preventDefault()
+            if (this.startX == null || this.startY == null) return
+
+            let x = e.clientX
+            let y = e.clientY
+            let gridEl = document.getElementById('grid')
+            let grid = gridEl.getBoundingClientRect()
+            if (!(x >= grid.left && x <= grid.right && y >= grid.top && y <= grid.bottom)) {
+                this.resetDraw()
+            }
+        }
+
+        this.resetDraw = () => {
             this.startX = null
             this.startY = null
             this.endX = null
             this.endY = null
+            this.setState({ tempCells: [] })
         }
 
         this.draw = (e) => {
@@ -218,11 +360,19 @@ class Board extends Component {
         }
     }
 
-    render({ width, height, size, boardState, verticalHints, horizontalHints }) {
-        let cell = (x, y) => {
+    componentDidMount() {
+        document.addEventListener('mousemove', this.moveOutsideGrid)
+    }
+
+    componentWillUnmount() {
+        document.removeEventListener('mousemove', this.moveOutsideGrid)
+    }
+
+    render({ width, height, size, boardState, colHints, rowHints, completedColHints, completedRowHints, gradient }, { tempCells }) {
+        let cell = (x, y, isTemp) => {
             let value = boardState[y][x]
             return h('div', {
-                class: 'cell cell-' + value,
+                class: 'cell cell-' + value + (isTemp ? ' cell-temp' : ''),
                 ontouchstart: (e) => this.startDrawing(e, x, y),
                 onmousedown: (e) => this.startDrawing(e, x, y),
                 ontouchend: (e) => this.endDrawing(e, x, y),
@@ -235,59 +385,58 @@ class Board extends Component {
         return h('table', { class: 'board' }, [
             h('tr', null, [
                 h('td'),
-                h('td', null, h(Hints, { size, isVertical: true, hints: verticalHints }))
+                h('td', null, h(Hints, { size, isCol: true, hints: colHints, completedHints: completedColHints, boardState }))
             ]),
             h('tr', null, [
-                h('td', null, h(Hints, { size, isVertical: false, hints: horizontalHints })),
-                h('td', null, h(Grid, { width, height, size, cell }))
+                h('td', null, h(Hints, { size, isCol: false, hints: rowHints, completedHints: completedRowHints, boardState })),
+                h('td', null, h(Grid, { width, height, size, cell, gradient, tempCells }))
             ])
         ])
     }
 }
 
 class Hints extends Component {
-    render({ size, isVertical, hints }) {
+    render({ size, isCol, hints, completedHints }) {
         let contents
-
         let innerSize = Math.floor(Math.max(12, size * 0.67))
 
-        if (isVertical) {
-            contents = h('tr', null, hints.map(hintGroup =>
-                h('td', { style: { width: size + 'px' } }, hintGroup.map(hint =>
-                    h('div', { class: 'hint', style: { height: innerSize + 'px' } }, hint)
-                ))
-            ))
+        if (isCol) {
+            contents = h('tr', null, hints.map((hintGroup, i) => {
+                let completedHintsInRow = completedHints && completedHints[i]
+                return h('td', { style: { width: size + 'px' } }, hintGroup.map((hint, j) => {
+                    let hintCompleted = completedHintsInRow && completedHintsInRow.includes(j)
+                    return h('div', {
+                        class: 'hint ' + (hintCompleted && 'hint-completed'),
+                        style: { height: innerSize + 'px' }
+                    }, hint)
+                }))
+            }))
             hints.map(hintGroup => {
                 return h('tr', null, )
             })
         } else {
-            contents = hints.map(hintGroup =>
-                h('tr', null, h('td', { style: { height: size + 'px' } }, hintGroup.map(hint =>
-                    h('div', { class: 'hint', style: { width: innerSize + 'px' } }, hint)
-                )))
-            )
+            contents = hints.map((hintGroup, i) => {
+                let completedHintsInRow = completedHints && completedHints[i]
+                return h('tr', null, h('td', { style: { height: size + 'px' } }, hintGroup.map((hint, j) => {
+                    let hintCompleted = completedHintsInRow && completedHintsInRow.includes(j)
+                    return h('div', {
+                        class: 'hint ' + (hintCompleted && 'hint-completed'),
+                        style: { width: innerSize + 'px' }
+                    }, hint)
+                })))
+            })
         }
 
         return h('div', { class: 'hints-container' },
             h('table', {
-                class: 'hints ' + (isVertical ? 'hints-vertical' : 'hints-horizontal')
+                class: 'hints ' + (isCol ? 'hints-col' : 'hints-row')
             }, contents)
         )
     }
 }
 
 class Grid extends Component {
-    constructor() {
-        super()
-
-        let color1 = chroma.random()
-        let color2 = chroma.random()
-        let color3 = chroma.random()
-        let angle = Math.floor(Math.random() * 360) + 'deg'
-        this.gradient = `linear-gradient(${angle}, ${color1} 0%, ${color2} 50%, ${color3} 100%)`
-    }
-
-    render({ width, height, size, cell }) {
+    render({ width, height, size, cell, gradient, tempValue, tempCells }) {
         let style = {
             width: size + 'px',
             height: size + 'px'
@@ -295,12 +444,16 @@ class Grid extends Component {
 
         let rows = Array(height).fill(0).map((_, y) => {
             return h('tr', null, Array(width).fill(0).map((_, x) => {
-                return h('td', { style }, cell && cell(x, y))
+                let isTemp = false
+                tempCells && tempCells.forEach(tempCell => {
+                    if (tempCell[0] === x && tempCell[1] === y) isTemp = true
+                })
+                return h('td', { style }, cell && cell(x, y, isTemp))
             }))
         })
 
-        return h('div', { class: 'grid-container', style: { background: this.gradient } },
+        return h('div', { class: 'grid-container', id: 'grid', style: { background: gradient } }, [
             h('table', { class: 'grid' }, rows)
-        )
+        ])
     }
 }
