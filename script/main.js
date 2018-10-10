@@ -329,7 +329,10 @@ class Main extends Component {
     render(_, { width, height, size, boardState, boardSolution, boardWidth, colHints, rowHints, solvedColHints, solvedRowHints, gradient, solved }) {
         let updateBoard = this.updateBoard
 
-        let title = h('h1', { style: { maxWidth: boardWidth } }, ['tomographical'])
+        let title = h('h1', { style: { maxWidth: boardWidth } }, 'tomographical')
+        let author = h('a', { href: 'https://zenzoa.com', target: 'blank' }, 'SG 2018')
+        let link = h('a', { href: 'https://github.com/sarahgould/tomographical', target: 'blank' }, 'SOURCE')
+        let footer = h('footer', { style: { maxWidth: boardWidth } }, [author, ' _ ', link])
 
         let sizeSelect = h('select', { onchange: this.changeDimensions }, [
             h('option', { value: 5, selected: width === 5 }, '5x5'),
@@ -350,7 +353,7 @@ class Main extends Component {
         )
 
         return h('div', { class: solved && 'solved' },
-            [board, title, controls]
+            [board, title, controls, footer]
         )
     }
 }
