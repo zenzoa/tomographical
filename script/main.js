@@ -418,18 +418,16 @@ class Board extends Component {
                 let minY = Math.min(y, this.startY)
                 let maxY = Math.max(y, this.startY)
                 for (let i = minY; i <= maxY; i++) {
-                    // TODO: don't affect 2's
-                    // let value = this.props.boardState[x][i]
-                    this.props.updateBoard(x, i, nextValue)
+                    let value = this.props.boardState[i][x]
+                    if (value !== 2) this.props.updateBoard(x, i, nextValue)
                 }
             } else if (y === this.startY) {
                 if (nextValue === 2) nextValue = 0
                 let minX = Math.min(x, this.startX)
                 let maxX = Math.max(x, this.startX)
                 for (let i = minX; i <= maxX; i++) {
-                    // TODO: don't affect 2's
-                    // let value = this.props.boardState[i][y]
-                    this.props.updateBoard(i, y, nextValue)
+                    let value = this.props.boardState[y][i]
+                    if (value !== 2) this.props.updateBoard(i, y, nextValue)
                 }
             }
 
