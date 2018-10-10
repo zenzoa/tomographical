@@ -330,9 +330,10 @@ class Main extends Component {
         let updateBoard = this.updateBoard
 
         let title = h('h1', { style: { maxWidth: boardWidth } }, 'tomographical')
-        let author = h('a', { href: 'https://zenzoa.com', target: 'blank' }, 'SG 2018')
+        let wiki = h('a', { href: 'https://en.wikipedia.org/wiki/Nonogram', target: 'blank' }, 'WHAT')
         let link = h('a', { href: 'https://github.com/sarahgould/tomographical', target: 'blank' }, 'SOURCE')
-        let footer = h('footer', { style: { maxWidth: boardWidth } }, [author, ' _ ', link])
+        let author = h('a', { href: 'https://zenzoa.com', target: 'blank' }, 'SG 2018')
+        let footer = h('footer', { style: { maxWidth: boardWidth } }, [wiki, ' _ ', link, ' _ ', author])
 
         let sizeSelect = h('select', { onchange: this.changeDimensions }, [
             h('option', { value: 5, selected: width === 5 }, '5x5'),

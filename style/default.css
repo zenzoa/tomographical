@@ -20,15 +20,15 @@ h1 {
 }
 
 footer {
-    margin-top: 10px;
-    color: #ccc;
+    margin-top: 15px;
+    color: #888;
     text-align: right;
 }
 
 a,
 a:visited,
 a:active {
-    color: #ccc;
+    color: inherit;
     font-size: 12px;
     text-decoration: none;
 }
