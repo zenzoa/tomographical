@@ -48,12 +48,12 @@ class Main extends Component {
             let colHints = this.colHints(boardSolution)
             let rowHints = this.rowHints(boardSolution)
 
-            let completedColHints = null
-            let completedRowHints = null
+            let solvedColHints = null
+            let solvedRowHints = null
 
             let gradient = this.gradient()
 
-            this.setState({ width, height, boardState, boardSolution, colHints, rowHints, gradient, completedColHints, completedRowHints, solved: false })
+            this.setState({ width, height, boardState, boardSolution, colHints, rowHints, gradient, solvedColHints, solvedRowHints, solved: false })
             this.resize(colHints, rowHints)
         }
 
@@ -61,9 +61,9 @@ class Main extends Component {
             let width = this.state.width
             let height = this.state.height
             let boardState = Array(width).fill(0).map(() => Array(height).fill(0))
-            let completedColHints = null
-            let completedRowHints = null
-            this.setState({ boardState, completedColHints, completedRowHints, solved: false })
+            let solvedColHints = null
+            let solvedRowHints = null
+            this.setState({ boardState, solvedColHints, solvedRowHints, solved: false })
         }
 
         this.updateBoard = (x, y, value) => {
@@ -78,10 +78,10 @@ class Main extends Component {
             let colSequences = this.colSequences(boardState)
             let rowSequences = this.rowSequences(boardState)
 
-            let completedColHints = this.completedHints(colHints, colSequences)
-            let completedRowHints = this.completedHints(rowHints, rowSequences)
+            let solvedColHints = this.solvedHints(colHints, colSequences)
+            let solvedRowHints = this.solvedHints(rowHints, rowSequences)
 
-            this.setState({ boardState, colHints, rowHints, completedColHints, completedRowHints })
+            this.setState({ boardState, colHints, rowHints, solvedColHints, solvedRowHints })
 
             if (this.testSolution(boardState)) {
                 this.solve(boardState)
@@ -154,40 +154,9 @@ class Main extends Component {
             }
             return hints
         }
-        
-        this.completedHints = (hints, sequences) => {
-            let completedHints = sequences.map((sequenceGroup, i) => {
-                let completedHintsInRow = []
-                let hintString = hints[i].join('-')
-                sequenceGroup.forEach(sequence => {
-                    let seqString = sequence.join('-')
-                    let firstIndex = hintString.indexOf(seqString)
-                    let lastIndex = hintString.lastIndexOf(seqString)
-                    if (firstIndex >= 0 && firstIndex === lastIndex) {
-                        let partialString = hintString.slice(0, firstIndex)
-                        let partialArray = partialString.split('-')
-                        let hintIndex = partialArray.length - 1
-                        for (let i = 0; i < sequence.length; i++) {
-                            completedHintsInRow.push(hintIndex + i)
-                        }
-                    }
-                })
-                return completedHintsInRow
-            })
-            return completedHints
-        }
-
-        this.parseSequences = (row) => {
-            let rowString = '2' + row.join('') + '2'
-            let matches = rowString.match(/2[12]+2/g)
-            let sequences = matches && matches.map(match =>
-                match.split('2').map(s => s.length).filter(s => s > 0)
-            )
-            return sequences || []
-        }
 
         this.rowSequences = (boardState) => {
-            return boardState.map(row => this.parseSequences(row))
+            return boardState.map(row => this.getSequences(row))
         }
 
         this.colSequences = (boardState) => {
@@ -195,9 +164,132 @@ class Main extends Component {
             let sequences = []
             for (let x = 0; x < width; x++) {
                 let column = boardState.map(row => row[x])
-                sequences.push(this.parseSequences(column))
+                sequences.push(this.getSequences(column))
             }
             return sequences
+        }
+
+        this.getSequences = (row) => {
+            let sequenceList = []
+            let sequence = []
+            let sequenceStarted = false
+            let run = ''
+            let start, end
+
+            row.map((cell, i) => {
+                let isFirstCell = i === 0
+                let isLastCell = i === this.state.width - 1
+
+                let startRun = () => {
+                    if (!sequenceStarted) start = i
+                    end = i
+                    sequenceStarted = true
+                    run = 0
+                }
+
+                let endRun = () => {
+                    sequenceStarted = false
+                    sequence = []
+                    run = 0
+                }
+
+                let addToRun = () => {
+                    if (sequenceStarted) run++
+                }
+
+                let saveRun = () => {
+                    if (run) sequence.push(run)
+                }
+
+                let saveSequence = () => {
+                    if (sequence.length > 0) {
+                        sequenceList.push({ value: sequence, start, end })
+                    }
+                }
+
+                if (isFirstCell && cell > 0) {
+                    startRun()
+                    if (cell === 1) addToRun()
+                } else if (isLastCell && cell > 0) {
+                    if (cell === 1) addToRun()
+                    end = i
+                    saveRun()
+                    saveSequence()
+                } else if (cell === 0) {
+                    saveSequence()
+                    endRun()
+                } else if (cell === 1) {
+                    addToRun()
+                } else if (cell === 2) {
+                    saveRun()
+                    startRun()
+                }
+            })
+
+            return sequenceList
+        }
+        
+        this.solvedHints = (hints, sequences) => {
+            let solvedHints = hints.map((hintsInRow, i) => {
+                let solvedHintsInRow = []
+
+                let sequenceList = sequences[i]
+                if (hintsInRow.length === 0 || sequenceList.length === 0) return
+
+                sequenceList.forEach(sequence => {
+                    let numRuns = sequence.value.length
+                    let numHints = hintsInRow.length
+                    if (numRuns > numHints) return
+
+                    let hintMatches = []
+                    let numMatches = 0
+
+                    let firstHint = 0
+                    let lastHint = numHints - numRuns
+
+                    // if sequence starts the row, only compare to the first hints
+                    let sequenceStartsRow = sequence.start === 0
+                    if (sequenceStartsRow) lastHint = firstHint
+
+                    // if sequence ends the row, only compare to the last hints
+                    let sequenceEndsRow = sequence.end === this.state.width - 1
+                    if (sequenceEndsRow) firstHint = lastHint
+
+                    for (let j = firstHint; j <= lastHint; j++) {
+                        let isMatch = true
+                        let tempHintMatches = []
+                        sequence.value.forEach((run, k) => {
+                            let hint = hintsInRow[j + k]
+                            if (run !== hint) isMatch = false
+                            else tempHintMatches.push(j + k)
+                        })
+
+                        // check if enough room before/after
+                        let hintsBefore = hintsInRow.slice(0, j)
+                        let hintsAfter = hintsInRow.slice(j + sequence.value.length)
+                        let hintsBeforeSum = hintsBefore.reduce((prev, curr) => prev + curr, 0)
+                        let hintsAfterSum = hintsAfter.reduce((prev, curr) => prev + curr, 0)
+                        let minRoomBefore = hintsBeforeSum + Math.max((hintsBefore.length - 1), 0)
+                        let minRoomAfter = hintsAfterSum + Math.max((hintsAfter.length - 1), 0)
+                        if (minRoomBefore > sequence.start) isMatch = false
+                        if (minRoomAfter > this.state.width - sequence.end - 1) isMatch = false
+
+                        if (isMatch) {
+                            numMatches++
+                            hintMatches = hintMatches.concat(tempHintMatches)
+                        }
+                    }
+
+                    // if sequence only matches one set of hints, mark those hints as solved
+                    if (numMatches === 1) {
+                        solvedHintsInRow = solvedHintsInRow.concat(hintMatches)
+                    }
+                })
+
+                return solvedHintsInRow
+            })
+
+            return solvedHints
         }
 
         this.resize = (colHints, rowHints) => {
@@ -234,7 +326,7 @@ class Main extends Component {
         this.setupBoard()
     }
 
-    render(_, { width, height, size, boardState, boardSolution, boardWidth, colHints, rowHints, completedColHints, completedRowHints, gradient, solved }) {
+    render(_, { width, height, size, boardState, boardSolution, boardWidth, colHints, rowHints, solvedColHints, solvedRowHints, gradient, solved }) {
         let updateBoard = this.updateBoard
 
         let title = h('h1', { style: { maxWidth: boardWidth } }, ['tomographical'])
@@ -254,7 +346,7 @@ class Main extends Component {
         )
 
         let board = boardState && h('div', { class: 'board-container', style: { width: boardWidth } },
-            h(Board, { width, height, size, boardState, updateBoard, colHints, rowHints, completedColHints, completedRowHints, gradient })
+            h(Board, { width, height, size, boardState, updateBoard, colHints, rowHints, solvedColHints, solvedRowHints, gradient })
         )
 
         return h('div', { class: solved && 'solved' },
@@ -318,15 +410,21 @@ class Board extends Component {
             if (x === this.startX && y === this.startY) {
                 this.props.updateBoard(x, y, nextValue)
             } else if (x === this.startX) {
+                if (nextValue === 2) nextValue = 0
                 let minY = Math.min(y, this.startY)
                 let maxY = Math.max(y, this.startY)
                 for (let i = minY; i <= maxY; i++) {
+                    // TODO: don't affect 2's
+                    // let value = this.props.boardState[x][i]
                     this.props.updateBoard(x, i, nextValue)
                 }
             } else if (y === this.startY) {
+                if (nextValue === 2) nextValue = 0
                 let minX = Math.min(x, this.startX)
                 let maxX = Math.max(x, this.startX)
                 for (let i = minX; i <= maxX; i++) {
+                    // TODO: don't affect 2's
+                    // let value = this.props.boardState[i][y]
                     this.props.updateBoard(i, y, nextValue)
                 }
             }
@@ -368,7 +466,7 @@ class Board extends Component {
         document.removeEventListener('mousemove', this.moveOutsideGrid)
     }
 
-    render({ width, height, size, boardState, colHints, rowHints, completedColHints, completedRowHints, gradient }, { tempCells }) {
+    render({ width, height, size, boardState, colHints, rowHints, solvedColHints, solvedRowHints, gradient }, { tempCells }) {
         let cell = (x, y, isTemp) => {
             let value = boardState[y][x]
             return h('div', {
@@ -385,10 +483,10 @@ class Board extends Component {
         return h('table', { class: 'board' }, [
             h('tr', null, [
                 h('td'),
-                h('td', null, h(Hints, { size, isCol: true, hints: colHints, completedHints: completedColHints, boardState }))
+                h('td', null, h(Hints, { size, isCol: true, hints: colHints, solvedHints: solvedColHints, boardState }))
             ]),
             h('tr', null, [
-                h('td', null, h(Hints, { size, isCol: false, hints: rowHints, completedHints: completedRowHints, boardState })),
+                h('td', null, h(Hints, { size, isCol: false, hints: rowHints, solvedHints: solvedRowHints, boardState })),
                 h('td', null, h(Grid, { width, height, size, cell, gradient, tempCells }))
             ])
         ])
@@ -396,15 +494,15 @@ class Board extends Component {
 }
 
 class Hints extends Component {
-    render({ size, isCol, hints, completedHints }) {
+    render({ size, isCol, hints, solvedHints }) {
         let contents
         let innerSize = Math.floor(Math.max(12, size * 0.67))
 
         if (isCol) {
             contents = h('tr', null, hints.map((hintGroup, i) => {
-                let completedHintsInRow = completedHints && completedHints[i]
+                let solvedHintsInRow = solvedHints && solvedHints[i]
                 return h('td', { style: { width: size + 'px' } }, hintGroup.map((hint, j) => {
-                    let hintCompleted = completedHintsInRow && completedHintsInRow.includes(j)
+                    let hintCompleted = solvedHintsInRow && solvedHintsInRow.includes(j)
                     return h('div', {
                         class: 'hint ' + (hintCompleted && 'hint-completed'),
                         style: { height: innerSize + 'px' }
@@ -416,9 +514,9 @@ class Hints extends Component {
             })
         } else {
             contents = hints.map((hintGroup, i) => {
-                let completedHintsInRow = completedHints && completedHints[i]
+                let solvedHintsInRow = solvedHints && solvedHints[i]
                 return h('tr', null, h('td', { style: { height: size + 'px' } }, hintGroup.map((hint, j) => {
-                    let hintCompleted = completedHintsInRow && completedHintsInRow.includes(j)
+                    let hintCompleted = solvedHintsInRow && solvedHintsInRow.includes(j)
                     return h('div', {
                         class: 'hint ' + (hintCompleted && 'hint-completed'),
                         style: { width: innerSize + 'px' }
