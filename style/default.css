@@ -60,6 +60,58 @@ button, select, option {
     font-family: inherit;
 }
 
+button,
+select {
+    height: 40px;
+    margin-top: 10px;
+    margin-left: 10px;
+    padding: 0 20px;
+    border: 1px solid #444;
+    border-radius: 0;
+    background: none;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+    transition: all 100ms ease-out;
+}
+@media (max-width: 600px), (max-height: 800px) {
+    button,
+    select {
+        height: 30px;
+        padding: 0 10px;
+    }
+}
+
+button:hover,
+button:focus {
+    border-color: #50e3c2;
+    color: #50e3c2;
+}
+select {
+    margin-right: 0;
+    font-weight: normal;
+}
+select:hover,
+select:focus {
+    border-color: #50e3c2;
+}
+select + button {
+    margin-left: 1px;
+}
+select option {
+    color: black;
+}
+
+.button-row {
+    margin-right: 10px;
+    text-align: right;
+}
+.button-row .draw-mode {
+    float: left;
+    margin-left: 20px;
+}
+
 .hints td {
     border: 1px solid #444;
 }
@@ -144,7 +196,7 @@ button, select, option {
     background: black;
 }
 .cell-2:after, .cell-temp-2:after {
-    content: '×';
+    content: '✕';
     position: absolute;
     top: 0; left: 0; bottom: 0; right: 0;
     width: 100%; height: 100%;
@@ -178,54 +230,22 @@ button, select, option {
     opacity: 1;
 }
 
-.button-row {
-    margin-right: 10px;
-    text-align: right;
+.cell-guess:before {
+    position: absolute;
+    top: 25%; right: 25%;
+    width: 50%; height: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
-.button-row :first-child {
-    float: left;
-    margin-left: 20px;
-}
-
-button,
-select {
-    height: 40px;
-    margin-top: 10px;
-    margin-left: 10px;
-    padding: 0 20px;
-    border: 1px solid #444;
-    border-radius: 0;
-    background: none;
-    color: white;
-    font-weight: bold;
-    text-align: center;
-    cursor: pointer;
-    transition: all 100ms ease-out;
-}
-@media (max-width: 600px), (max-height: 800px) {
-    button,
-    select {
-        height: 30px;
-        padding: 0 10px;
-    }
-}
-
-button:hover,
-button:focus {
-    border-color: #50e3c2;
-    color: #50e3c2;
-}
-select {
-    margin-right: 0;
-    font-weight: normal;
-}
-select:hover,
-select:focus {
-    border-color: #50e3c2;
-}
-select + button {
-    margin-left: 1px;
-}
-select option {
+.cell-guess-1:before {
+    content: '?';
+    background: #eee;
     color: black;
+    font-size: 12px;
+}
+.cell-guess-2:before {
+    content: '✕';
+    background: #444;
+    color: #ccc;
 }

@@ -19,7 +19,8 @@ class Main extends Component {
             nextHeight: 15,
             size: this.maxSize,
             density: 0.6,
-            solved: false
+            solved: false,
+            drawMode: 'normal'
         }
 
         this.setupBoard = () => {
@@ -319,6 +320,11 @@ class Main extends Component {
             let angle = Math.floor(Math.random() * 360) + 'deg'
             return `linear-gradient(${angle}, ${color1} 0%, ${color2} 50%, ${color3} 100%)`
         }
+
+        this.changeDrawMode = () => {
+            if (this.state.drawMode === 'normal') this.setState({ drawMode: 'guess' })
+            else this.setState({ drawMode: 'normal' })
+        }
     }
 
     componentDidMount() {
@@ -326,7 +332,7 @@ class Main extends Component {
         this.setupBoard()
     }
 
-    render(_, { width, height, size, boardState, boardSolution, boardWidth, colHints, rowHints, solvedColHints, solvedRowHints, gradient, solved }) {
+    render(_, { width, height, size, boardState, boardSolution, boardWidth, colHints, rowHints, solvedColHints, solvedRowHints, gradient, solved, drawMode }) {
         let updateBoard = this.updateBoard
 
         let title = h('h1', { style: { maxWidth: boardWidth } }, 'tomographical')
@@ -335,6 +341,7 @@ class Main extends Component {
         let author = h('a', { href: 'https://zenzoa.com', target: 'blank' }, 'SG 2018')
         let footer = h('footer', { style: { maxWidth: boardWidth } }, [wiki, ' _ ', link, ' _ ', author])
 
+        let drawModeButton = h('button', { class: 'draw-mode', type: 'button', onclick: this.changeDrawMode }, drawMode === 'normal' ? 'draw' : 'guess')
         let sizeSelect = h('select', { onchange: this.changeDimensions }, [
             h('option', { value: 5, selected: width === 5 }, '5x5'),
             h('option', { value: 10, selected: width === 10 }, '10x10'),
@@ -350,7 +357,7 @@ class Main extends Component {
         )
 
         let board = boardState && h('div', { class: 'board-container', style: { width: boardWidth } },
-            h(Board, { width, height, size, boardState, updateBoard, colHints, rowHints, solvedColHints, solvedRowHints, gradient })
+            h(Board, { width, height, size, boardState, updateBoard, colHints, rowHints, solvedColHints, solvedRowHints, gradient, drawMode })
         )
 
         return h('div', { class: solved && 'solved' },
@@ -360,10 +367,13 @@ class Main extends Component {
 }
 
 class Board extends Component {
-    constructor() {
+    constructor(props) {
         super()
 
-        this.state = { tempCells: [] }
+        this.state = {
+            tempCells: [],
+            guessCells: Array(props.width).fill(0).map(() => Array(props.height).fill(0))
+        }
 
         let pointerIsDown = false
         let doubleClickTimeout
@@ -451,7 +461,7 @@ class Board extends Component {
         this.pointerUp = (e) => {
             if (!pointerIsDown) return
 
-            let realEvent = e.touches ? e.touches[0] : e
+            let realEvent = e.changedTouches ? e.changedTouches[0] : e
             let x = realEvent.clientX
             let y = realEvent.clientY
             
@@ -472,7 +482,7 @@ class Board extends Component {
             let drawCell = (x, y) => this.drawCell(x, y, nextValue)
 
             if (cell.x === startCell.x && cell.y === startCell.y) {
-                this.props.updateBoard(cell.x, cell.y, nextValue)
+                this.drawCell(cell.x, cell.y)
             } else if (cell.x === startCell.x) {
                 this.drawLine(drawCell, cell, true)
             } else if (cell.y === startCell.y) {
@@ -484,7 +494,18 @@ class Board extends Component {
         }
 
         this.drawCell = (x, y) => {
-            this.props.updateBoard(x, y, nextValue)
+            if (this.props.drawMode === 'normal') {
+                this.props.updateBoard(x, y, nextValue)
+                let guessCells = this.state.guessCells
+                guessCells[y][x] = 0
+                this.setState({ guessCells })
+
+            } else {
+                this.props.updateBoard(x, y, 0)
+                let guessCells = this.state.guessCells
+                guessCells[y][x] = nextValue
+                this.setState({ guessCells })
+            }
         }
 
         this.drawLine = (callback, endCell, isRow) => {
@@ -524,12 +545,24 @@ class Board extends Component {
         document.removeEventListener('touchcancel', this.pointerUp)
     }
 
-    render({ width, height, size, boardState, colHints, rowHints, solvedColHints, solvedRowHints, gradient }, { tempCells }) {
+    componentWillUpdate(nextProps) {
+        // if () {
+        //     console.log('reset guess cells')
+        //     let guessCells = Array(nextProps.width).fill(0).map(() => Array(nextProps.height).fill(0))
+        //     this.setState({ guessCells })
+        // }
+    }
+
+    render({ width, height, size, boardState, colHints, rowHints, solvedColHints, solvedRowHints, gradient }, { tempCells, guessCells }) {
         let cell = (x, y, isTemp, tempValue) => {
             let value = boardState[y][x]
-            return h('div', {
-                class: 'cell cell-' + value + (isTemp ? ' cell-temp cell-temp-' + tempValue : '')
-            })
+            let guessValue = guessCells[y][x]
+
+            let classes = ['cell', 'cell-' + value]
+            if (isTemp) classes = classes.concat(['cell-temp', 'cell-temp-' + tempValue])
+            if (guessValue) classes = classes.concat(['cell-guess', 'cell-guess-' + guessValue])
+
+            return h('div', { class: classes.join(' ') })
         }
 
         return h('table', { class: 'board' }, [
