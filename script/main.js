@@ -303,7 +303,7 @@ class Main extends Component {
             let rowTiles = (maxHoriztonalHints * 0.67) + this.state.width
 
             let tileWidth = Math.floor(window.innerWidth / (rowTiles + 1))
-            let tileHeight = Math.floor((window.innerHeight - 120) / (colTiles + 1))
+            let tileHeight = Math.floor((window.innerHeight - 130) / (colTiles + 1))
             let tileSize = Math.min(tileWidth, tileHeight)
 
             let size = Math.min(this.maxSize, Math.max(this.minSize, tileSize))
@@ -363,122 +363,172 @@ class Board extends Component {
     constructor() {
         super()
 
-        this.state = {
-            tempValue: 0,
-            tempCells: []
-        }
+        this.state = { tempCells: [] }
 
-        this.startX = null
-        this.startY = null
-        this.endX = null
-        this.endY = null
+        let pointerIsDown = false
+        let doubleClickTimeout
+        let startCell = null
+        let lastCell = null
+        let nextValue = 0
 
-        this.startDrawing = (e, x, y) => {
-            e.preventDefault()
-            this.startX = x
-            this.startY = y
-        }
-
-        this.moveDrawing = (e, x, y) => {
-            if (this.startX == null || this.startY == null) return
-
-            this.endX = x
-            this.endY = y
-
-            let tempCells = []
-            if (x === this.startX && y === this.startY) {
-                tempCells = [[this.startX, this.startY]]
-            } else if (x === this.startX) {
-                let minY = Math.min(y, this.startY)
-                let maxY = Math.max(y, this.startY)
-                for (let i = minY; i <= maxY; i++) {
-                    tempCells.push([x, i])
-                }
-            } else if (y === this.startY) {
-                let minX = Math.min(x, this.startX)
-                let maxX = Math.max(x, this.startX)
-                for (let i = minX; i <= maxX; i++) {
-                    tempCells.push([i, y])
-                }
-            }
-            this.setState({ tempCells })
-        }
-
-        this.endDrawing = (e, x, y) => {
-            e.preventDefault()
-            if (this.startX == null || this.startY == null) return
-
-            let nextValue = 1 + this.props.boardState[this.startY][this.startX]
-            if (nextValue > 2) nextValue = 0
-
-            if (x === this.startX && y === this.startY) {
-                this.props.updateBoard(x, y, nextValue)
-            } else if (x === this.startX) {
-                if (nextValue === 2) nextValue = 0
-                let minY = Math.min(y, this.startY)
-                let maxY = Math.max(y, this.startY)
-                for (let i = minY; i <= maxY; i++) {
-                    let value = this.props.boardState[i][x]
-                    if (value !== 2) this.props.updateBoard(x, i, nextValue)
-                }
-            } else if (y === this.startY) {
-                if (nextValue === 2) nextValue = 0
-                let minX = Math.min(x, this.startX)
-                let maxX = Math.max(x, this.startX)
-                for (let i = minX; i <= maxX; i++) {
-                    let value = this.props.boardState[y][i]
-                    if (value !== 2) this.props.updateBoard(i, y, nextValue)
-                }
-            }
-
-            this.resetDraw()
-        }
-
-        this.moveOutsideGrid = (e) => {
-            e.preventDefault()
-            if (this.startX == null || this.startY == null) return
-
-            let x = e.clientX
-            let y = e.clientY
+        this.getGrid = () => {
             let gridEl = document.getElementById('grid')
-            let grid = gridEl.getBoundingClientRect()
-            if (!(x >= grid.left && x <= grid.right && y >= grid.top && y <= grid.bottom)) {
-                this.resetDraw()
+            return gridEl.getBoundingClientRect()
+        }
+
+        this.inGrid = (x, y) => {
+            let grid = this.getGrid()
+            return x >= grid.left && x <= grid.right && y >= grid.top && y <= grid.bottom
+        }
+
+        this.getCell = (x, y) => {
+            let grid = this.getGrid()
+            let dx = x - grid.left
+            let dy = y - grid.top
+            let cellX = Math.floor(dx / this.props.size)
+            let cellY = Math.floor(dy / this.props.size)
+            let value = this.props.boardState[cellY][cellX]
+
+            return {
+                x: cellX,
+                y: cellY,
+                value: value
             }
         }
 
-        this.resetDraw = () => {
-            this.startX = null
-            this.startY = null
-            this.endX = null
-            this.endY = null
+        this.pointerDown = (e) => {
+            let realEvent = e.touches ? e.touches[0] : e
+            let x = realEvent.clientX
+            let y = realEvent.clientY
+
+            if (!this.inGrid(x, y)) return
+
+            this.startDraw(x, y)
+
+            if (doubleClickTimeout) this.doubleClick()
+            else doubleClickTimeout = setTimeout(this.clearDoubleClick, 200)
+            lastCell = startCell
+        }
+
+        this.clearDoubleClick = () => {
+            clearTimeout(doubleClickTimeout)
+            doubleClickTimeout = null
+        }
+
+        this.doubleClick = () => {
+            if (pointerIsDown && lastCell.x === startCell.x && lastCell.y === startCell.y) {
+                nextValue = 2
+            }
+            this.clearDoubleClick()
+        }
+
+        this.pointerMove = (e) => {
+            if (!pointerIsDown) return
+
+            let realEvent = e.touches ? e.touches[0] : e
+            let x = realEvent.clientX
+            let y = realEvent.clientY
+            
+            if (this.inGrid(x, y)) {
+                let cell = this.getCell(x, y)
+                let tempCells = []
+                let updateTempCells = (x, y) => tempCells.push([x, y, nextValue])
+                if (cell.x === startCell.x && cell.y === startCell.y) {
+                    return
+                } else if (cell.x === startCell.x) {
+                    this.drawLine(updateTempCells, cell, true)
+                } else if (cell.y === startCell.y) {
+                    this.drawLine(updateTempCells, cell, false)
+                }
+                this.setState({ tempCells })
+            } else {
+                pointerIsDown = false
+                startCell = null
+                this.setState({ tempCells: [] })
+            }
+        }
+
+        this.pointerUp = (e) => {
+            if (!pointerIsDown) return
+
+            let realEvent = e.touches ? e.touches[0] : e
+            let x = realEvent.clientX
+            let y = realEvent.clientY
+            
+            this.endDraw(x, y)
+        }
+
+        this.startDraw = (x, y) => {
+            pointerIsDown = true
+            let cell = this.getCell(x, y)
+            nextValue = cell.value ? 0 : 1
+            startCell = cell
+        }
+
+        this.endDraw = (x, y) => {
+            pointerIsDown = false
+            let cell = this.getCell(x, y)
+
+            let drawCell = (x, y) => this.drawCell(x, y, nextValue)
+
+            if (cell.x === startCell.x && cell.y === startCell.y) {
+                this.props.updateBoard(cell.x, cell.y, nextValue)
+            } else if (cell.x === startCell.x) {
+                this.drawLine(drawCell, cell, true)
+            } else if (cell.y === startCell.y) {
+                this.drawLine(drawCell, cell, false)
+            }
+
+            startCell = null
             this.setState({ tempCells: [] })
         }
 
-        this.draw = (e) => {
-            let realEvent = event.touches ? event.touches[0] : event
+        this.drawCell = (x, y) => {
+            this.props.updateBoard(x, y, nextValue)
+        }
+
+        this.drawLine = (callback, endCell, isRow) => {
+            let start = isRow ? startCell.y : startCell.x
+            let end = isRow ? endCell.y : endCell.x
+
+            let min = Math.min(start, end)
+            let max = Math.max(start, end)
+
+            for (let i = min; i <= max; i++) {
+                let x = isRow ? startCell.x : i
+                let y = isRow ? i : startCell.y
+                callback(x, y)
+            }
         }
     }
 
     componentDidMount() {
-        document.addEventListener('mousemove', this.moveOutsideGrid)
+        document.addEventListener('mousedown', this.pointerDown)
+        document.addEventListener('mousemove', this.pointerMove)
+        document.addEventListener('mouseup', this.pointerUp)
+        
+        document.addEventListener('touchstart', this.pointerDown)
+        document.addEventListener('touchmove', this.pointerMove, { passive: false })
+        document.addEventListener('touchend', this.pointerUp)
+        document.addEventListener('touchcancel', this.pointerUp)
     }
 
     componentWillUnmount() {
-        document.removeEventListener('mousemove', this.moveOutsideGrid)
+        document.removeEventListener('mousedown', this.pointerDown)
+        document.removeEventListener('mousemove', this.pointerMove)
+        document.removeEventListener('mouseup', this.pointerUp)
+
+        document.removeEventListener('touchstart', this.pointerDown)
+        document.removeEventListener('touchmove', this.pointerMove)
+        document.removeEventListener('touchend', this.pointerUp)
+        document.removeEventListener('touchcancel', this.pointerUp)
     }
 
     render({ width, height, size, boardState, colHints, rowHints, solvedColHints, solvedRowHints, gradient }, { tempCells }) {
-        let cell = (x, y, isTemp) => {
+        let cell = (x, y, isTemp, tempValue) => {
             let value = boardState[y][x]
             return h('div', {
-                class: 'cell cell-' + value + (isTemp ? ' cell-temp' : ''),
-                ontouchstart: (e) => this.startDrawing(e, x, y),
-                onmousedown: (e) => this.startDrawing(e, x, y),
-                ontouchend: (e) => this.endDrawing(e, x, y),
-                onmouseup: (e) => this.endDrawing(e, x, y),
-                ontouchmove: (e) => this.moveDrawing(e, x, y),
-                onmousemove: (e) => this.moveDrawing(e, x, y)
+                class: 'cell cell-' + value + (isTemp ? ' cell-temp cell-temp-' + tempValue : '')
             })
         }
 
@@ -536,7 +586,7 @@ class Hints extends Component {
 }
 
 class Grid extends Component {
-    render({ width, height, size, cell, gradient, tempValue, tempCells }) {
+    render({ width, height, size, cell, gradient, tempCells }) {
         let style = {
             width: size + 'px',
             height: size + 'px'
@@ -544,11 +594,14 @@ class Grid extends Component {
 
         let rows = Array(height).fill(0).map((_, y) => {
             return h('tr', null, Array(width).fill(0).map((_, x) => {
-                let isTemp = false
+                let isTemp, tempValue
                 tempCells && tempCells.forEach(tempCell => {
-                    if (tempCell[0] === x && tempCell[1] === y) isTemp = true
+                    if (tempCell[0] === x && tempCell[1] === y) {
+                        isTemp = true
+                        tempValue = tempCell[2]
+                    }
                 })
-                return h('td', { style }, cell && cell(x, y, isTemp))
+                return h('td', { style }, cell && cell(x, y, isTemp, tempValue))
             }))
         })
 
