@@ -46,28 +46,23 @@ table, tr, td {
     white-space: nowrap;
 }
 
-button, select, option {
-    font-family: inherit;
-}
-
-button,
-select {
+button {
     height: 40px;
-    padding: 0 20px;
+    padding: 0;
     border: 1px solid #444;
     border-radius: 0;
     background: none;
     color: white;
+    font-family: inherit;
     font-weight: bold;
     text-align: center;
     cursor: pointer;
     transition: all 100ms ease-out;
 }
 @media (max-width: 600px), (max-height: 800px) {
-    button,
-    select {
+    button {
         height: 30px;
-        padding: 0 10px;
+        padding: 0;
     }
 }
 
@@ -78,20 +73,6 @@ button:hover,
 button:focus {
     border-color: #50e3c2;
     color: #50e3c2;
-}
-select {
-    margin-right: 0;
-    font-weight: normal;
-}
-select:hover,
-select:focus {
-    border-color: #50e3c2;
-}
-select + button {
-    margin-left: 1px;
-}
-select option {
-    color: black;
 }
 
 .button-row {
