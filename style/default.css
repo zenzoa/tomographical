@@ -8,7 +8,7 @@ body {
     background: black;
     color: white;
     font-size: 16px;
-    font-family: 'Courier New', Courier, monospace;
+    font-family: Inconsolata, 'Courier New', Courier, monospace;
     text-align: center;
 }
 
@@ -63,8 +63,6 @@ button, select, option {
 button,
 select {
     height: 40px;
-    margin-top: 10px;
-    margin-left: 10px;
     padding: 0 20px;
     border: 1px solid #444;
     border-radius: 0;
@@ -110,6 +108,11 @@ select option {
 .button-row .draw-mode {
     float: left;
     margin-left: 20px;
+}
+.button-row button {
+    margin-top: 10px;
+    margin-left: 10px;
+    width: 6em;
 }
 
 .hints td {
@@ -263,4 +266,29 @@ select option {
 .draw-mode-guess .cell-temp:after {
     content: '';
     background: rgba(255,255,255,0.5);
+}
+
+.modal {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+}
+.modal > * + * {
+    margin-top: 10px;
+}
+.modal > :first-child {
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+.modal > button {
+    min-width: 30%;
+}
+.modal > .divider {
+    border-bottom: 1px solid #444;
+    width: 10%;
+    margin: 20px 0 10px;
 }

@@ -15,18 +15,13 @@ class Main extends Component {
         this.maxSize = 40
 
         this.state = {
-            nextWidth: 15,
-            nextHeight: 15,
             size: this.maxSize,
             density: 0.6,
             solved: false,
             drawMode: 'normal'
         }
 
-        this.setupBoard = () => {
-            let width = this.state.nextWidth
-            let height = this.state.nextHeight
-
+        this.setupBoard = (width, height) => {
             let boardState = Array(width).fill(0).map(() => Array(height).fill(0))
             let guessCells = Array(width).fill(0).map(() => Array(height).fill(0))
 
@@ -40,7 +35,7 @@ class Main extends Component {
 
             let gradient = this.gradient()
 
-            this.setState({ width, height, boardState, boardSolution, colHints, rowHints, gradient, solvedColHints, solvedRowHints, guessCells, solved: false })
+            this.setState({ width, height, boardState, boardSolution, colHints, rowHints, gradient, solvedColHints, solvedRowHints, guessCells, solved: false, modalOpen: false })
             this.resize(colHints, rowHints)
         }
 
@@ -134,12 +129,6 @@ class Main extends Component {
             let guessCells = Array(this.state.width).fill(0).map(() => Array(this.state.height).fill(0))
 
             this.setState({ boardState, guessCells, solved: true })
-        }
-
-        this.changeDimensions = (e) => {
-            let value = parseInt(e.target.value)
-            if (isNaN(value)) return
-            this.setState({ nextWidth: value, nextHeight: value })
         }
 
         this.parseRow = (row) => {
@@ -338,10 +327,10 @@ class Main extends Component {
 
     componentDidMount() {
         window.onresize = this.resize
-        this.setupBoard()
+        this.setupBoard(10, 10)
     }
 
-    render(_, { width, height, size, boardState, boardSolution, boardWidth, colHints, rowHints, solvedColHints, solvedRowHints, guessCells, gradient, solved, drawMode }) {
+    render(_, { width, height, size, boardState, boardSolution, boardWidth, colHints, rowHints, solvedColHints, solvedRowHints, guessCells, gradient, solved, drawMode, modalOpen }) {
         let updateCell = this.updateCell
         let updateGuess = this.updateGuess
 
@@ -352,27 +341,38 @@ class Main extends Component {
         let footer = h('footer', { style: { maxWidth: boardWidth } }, [wiki, ' _ ', link, ' _ ', author])
 
         let drawModeButton = h('button', { class: 'draw-mode', type: 'button', onclick: this.changeDrawMode }, drawMode === 'normal' ? 'draw' : 'guess')
-        let sizeSelect = h('select', { onchange: this.changeDimensions }, [
-            h('option', { value: 5, selected: width === 5 }, '5x5'),
-            h('option', { value: 10, selected: width === 10 }, '10x10'),
-            h('option', { value: 15, selected: width === 15 }, '15x15'),
-            h('option', { value: 20, selected: width === 20 }, '20x20'),
-            h('option', { value: 25, selected: width === 25 }, '25x25')
-        ])
-        let newButton = h('button', { type: 'button', onclick: this.setupBoard }, 'new')
+        let newButton = h('button', { type: 'button', onclick: () => this.setState({ modalOpen: true }) }, 'new')
         let resetButton = h('button', { type: 'button', onclick: this.resetBoard }, 'reset')
         let solveButton = h('button', { type: 'button', onclick: () => this.solve(boardSolution) }, 'solve')
         let controls = h('div', { class: 'button-row', style: { maxWidth: boardWidth } },
-            [drawModeButton, sizeSelect, newButton, resetButton, solveButton]
+            [drawModeButton, newButton, resetButton, solveButton]
         )
 
         let board = boardState && h('div', { class: 'board-container', style: { width: boardWidth } },
             h(Board, { width, height, size, boardState, updateCell, colHints, rowHints, solvedColHints, solvedRowHints, guessCells, updateGuess, gradient, drawMode })
         )
 
+        if (modalOpen) return h(NewGameModal, { onclose: size => size ? this.setupBoard(size, size) : this.setState({ modalOpen: false }) })
+
         return h('div', { class: (solved && 'solved') + (' draw-mode-' + drawMode) },
             [board, title, controls, footer]
         )
+    }
+}
+
+class NewGameModal extends Component {
+    render({ onclose }) {
+        let header = h('div', null, 'new puzzle')
+        let buttons = [
+            h('button', { type: 'button', onclick: () => onclose(5) }, '5x5'),
+            h('button', { type: 'button', onclick: () => onclose(10) }, '10x10'),
+            h('button', { type: 'button', onclick: () => onclose(15) }, '15x15'),
+            h('button', { type: 'button', onclick: () => onclose(20) }, '20x20'),
+            h('button', { type: 'button', onclick: () => onclose(25) }, '25x25')
+        ]
+        let divider = h('div', { class: 'divider' })
+        let cancelButton = h('button', { type: 'button', onclick: () => onclose(0) }, 'cancel')
+        return h('div', { class: 'modal' }, [header, buttons, divider, cancelButton])
     }
 }
 
