@@ -415,6 +415,8 @@ class Board extends Component {
         }
 
         this.pointerDown = (e) => {
+            e.preventDefault()
+
             let realEvent = e.touches ? e.touches[0] : e
             let x = realEvent.clientX
             let y = realEvent.clientY
@@ -443,6 +445,7 @@ class Board extends Component {
 
         this.pointerMove = (e) => {
             if (!pointerIsDown) return
+            e.preventDefault()
 
             let realEvent = e.touches ? e.touches[0] : e
             let x = realEvent.clientX
@@ -470,6 +473,7 @@ class Board extends Component {
 
         this.pointerUp = (e) => {
             if (!pointerIsDown) return
+            e.preventDefault()
 
             let realEvent = e.changedTouches ? e.changedTouches[0] : e
             let x = realEvent.clientX
@@ -537,10 +541,10 @@ class Board extends Component {
         document.addEventListener('mousemove', this.pointerMove)
         document.addEventListener('mouseup', this.pointerUp)
         
-        document.addEventListener('touchstart', this.pointerDown)
+        document.addEventListener('touchstart', this.pointerDown, { passive: false })
         document.addEventListener('touchmove', this.pointerMove, { passive: false })
-        document.addEventListener('touchend', this.pointerUp)
-        document.addEventListener('touchcancel', this.pointerUp)
+        document.addEventListener('touchend', this.pointerUp, { passive: false })
+        document.addEventListener('touchcancel', this.pointerUp, { passive: false })
     }
 
     componentWillUnmount() {
