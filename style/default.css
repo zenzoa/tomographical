@@ -105,7 +105,7 @@ select option {
 .button-row button {
     margin-top: 10px;
     margin-left: 10px;
-    width: 6em;
+    min-width: 6em;
 }
 
 .hints td {
