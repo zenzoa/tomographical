@@ -8,7 +8,7 @@ body {
     background: black;
     color: white;
     font-size: 16px;
-    font-family: Inconsolata, 'Courier New', Courier, monospace;
+    font-family: 'Courier New', Courier, monospace;
     text-align: center;
 }
 
@@ -180,6 +180,8 @@ select option {
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
+}
+.cell:before, .cell:after {
     transition: all 100ms ease-out;
 }
 .cell-temp:after {
@@ -196,7 +198,7 @@ select option {
     background: black;
 }
 .cell-2:after, .cell-temp-2:after {
-    content: '✕';
+    content: '×';
     position: absolute;
     top: 0; left: 0; bottom: 0; right: 0;
     width: 100%; height: 100%;
@@ -209,43 +211,56 @@ select option {
 .solved .cell-2:after {
     display: none;
 }
-.cell-temp-0:after {
-    background: rgba(255,255,255,0.5);
-}
-.cell-temp-1.cell-0 {
-    background: rgba(255,255,255,0.5);
-}
-.cell-temp-1.cell-2 {
-    background: rgba(0,0,0,0.5);
-}
-.cell-temp-2:after {
-    background: rgba(0,0,0,0.5);
-}
-.cell-0.cell-temp-0:after,
-.cell-1.cell-temp-1:after {
+.cell-2.cell-guess:after {
     display: none;
-    outline: 1px solid red;
-}
-.cell-2.cell-temp-2:after {
-    opacity: 1;
 }
 
-.cell-guess:before {
+.cell-guess:before,
+.draw-mode-guess .cell-temp:before {
     position: absolute;
-    top: 25%; right: 25%;
-    width: 50%; height: 50%;
+    top: 20%; right: 20%;
+    width: 60%; height: 60%;
     display: flex;
     align-items: center;
     justify-content: center;
 }
-.cell-guess-1:before {
+.cell-guess-1:before,
+.draw-mode-guess .cell-temp-1:before {
     content: '?';
-    background: #eee;
+    background: #ddd;
     color: black;
     font-size: 12px;
 }
-.cell-guess-2:before {
-    content: '✕';
-    background: #444;
+.cell-guess-2:before,
+.draw-mode-guess .cell-temp-2:before {
+    content: '×';
+    background: black;
     color: #ccc;
+    font-size: 20px;
+}
+
+
+.draw-mode-normal .cell-temp-0:after {
+    background: rgba(255,255,255,0.5);
+}
+.draw-mode-normal .cell-temp-1.cell-0 {
+    background: rgba(255,255,255,0.5);
+}
+.draw-mode-normal .cell-temp-1.cell-2 {
+    background: rgba(0,0,0,0.5);
+}
+.draw-mode-normal .cell-temp-2:after {
+    background: rgba(0,0,0,0.5);
+}
+.draw-mode-normal .cell-0.cell-temp-0:after,
+.draw-mode-normal .cell-1.cell-temp-1:after {
+    display: none;
+}
+.draw-mode-normal .cell-2.cell-temp-2:after {
+    opacity: 1;
+}
+
+.draw-mode-guess .cell-temp:after {
+    content: '';
+    background: rgba(255,255,255,0.5);
 }
