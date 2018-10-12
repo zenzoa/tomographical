@@ -46,16 +46,6 @@ table, tr, td {
     white-space: nowrap;
 }
 
-button {
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-}
-button::-moz-focus-inner {
-    border: none;
-}
-
 button, select, option {
     font-family: inherit;
 }
@@ -81,6 +71,9 @@ select {
     }
 }
 
+button::-moz-focus-inner {
+    border: none;
+}
 button:hover,
 button:focus {
     border-color: #50e3c2;
@@ -161,6 +154,10 @@ select option {
 
 .grid {
     cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 .grid td {
     position: relative;

@@ -415,13 +415,12 @@ class Board extends Component {
         }
 
         this.pointerDown = (e) => {
-            e.preventDefault()
-
             let realEvent = e.touches ? e.touches[0] : e
             let x = realEvent.clientX
             let y = realEvent.clientY
 
             if (!this.inGrid(x, y)) return
+            e.preventDefault()
 
             this.startDraw(x, y)
 
