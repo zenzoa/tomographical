@@ -313,7 +313,7 @@ class Main extends Component {
             let hintsWidth = Math.max(leftoverSpace, hintTiles)
             let boardWidth = hintsWidth + gridWidth
 
-            let marginLeft = Math.max(0, (leftoverSpace - hintTiles))
+            let marginLeft = Math.min(30, Math.max(0, (leftoverSpace - hintTiles)))
             let marginRight = marginLeft > 0 ? leftoverSpace : (window.innerWidth - boardWidth)
             let boardMargins = { marginLeft: marginLeft + 'px', marginRight: marginRight + 'px' }
 
