@@ -81,6 +81,9 @@ button:focus {
     border-color: #50e3c2;
     color: #50e3c2;
 }
+button:disabled {
+    opacity: 0.5;
+}
 
 .button-row {
     display: flex;

@@ -18,7 +18,8 @@ class Main extends Component {
             size: this.maxSize,
             density: 0.6,
             solved: false,
-            drawMode: 'normal'
+            drawMode: 'normal',
+            history: []
         }
 
         this.setupBoard = (width, height) => {
@@ -40,7 +41,7 @@ class Main extends Component {
         }
 
         this.createSolution = (width, height) => {
-            let boardSolution = Array(width).fill(0).map(() => Array(height).fill(null))
+            let boardSolution = Array(height).fill(0).map(() => Array(width).fill(null))
             let numCells = width * height
             let toBeFilled = Math.floor(numCells * this.state.density)
             if (toBeFilled > numCells) toBeFilled = numCells
@@ -59,11 +60,12 @@ class Main extends Component {
         this.resetBoard = () => {
             let width = this.state.width
             let height = this.state.height
-            let boardState = Array(width).fill(0).map(() => Array(height).fill(0))
-            let guessCells = Array(width).fill(0).map(() => Array(height).fill(0))
+            let boardState = Array(height).fill(0).map(() => Array(width).fill(0))
+            let guessCells = Array(height).fill(0).map(() => Array(width).fill(0))
             let solvedColHints = null
             let solvedRowHints = null
-            this.setState({ boardState, solvedColHints, solvedRowHints, guessCells, solved: false })
+            let history = []
+            this.setState({ boardState, solvedColHints, solvedRowHints, guessCells, solved: false, history })
         }
 
         this.updateCell = (x, y, value) => {
@@ -90,6 +92,23 @@ class Main extends Component {
             let guessCells = this.state.guessCells
             guessCells[y][x] = value
             this.setState({ guessCells })
+        }
+
+        this.updateHistory = () => {
+            let boardState = this.state.boardState.map(row => row.map(cell => cell))
+            let guessCells = this.state.guessCells.map(row => row.map(cell => cell))
+
+            let history = this.state.history.concat([{ boardState, guessCells }])
+            if (history.length > 20) history = history.slice(history.length - 20)
+            this.setState({ history })
+        }
+
+        this.undo = () => {
+            if (this.state.history.length < 1) return
+
+            let history = this.state.history.slice()
+            let { boardState, guessCells } = history.pop()
+            this.setState({ history, boardState, guessCells })
         }
 
         this.compareHints = (hints, solutionHints) => {
@@ -356,10 +375,12 @@ class Main extends Component {
         gradient,
         solved,
         drawMode,
-        modalOpen
+        modalOpen,
+        history
     }) {
         let updateCell = this.updateCell
         let updateGuess = this.updateGuess
+        let updateHistory = this.updateHistory
 
         let title = h('h1', { style: boardMargins }, 'tomographical')
 
@@ -368,17 +389,18 @@ class Main extends Component {
         let author = h('a', { href: 'https://zenzoa.com', target: 'blank' }, 'SG 2018')
         let footer = h('footer', { style: boardMargins }, [wiki, ' _ ', link, ' _ ', author])
 
-        let drawModeButton = h('button', { class: 'draw-mode', type: 'button', onclick: this.changeDrawMode }, drawMode === 'normal' ? 'draw' : 'guess')
+        let drawModeButton = h('button', { type: 'button', onclick: this.changeDrawMode }, drawMode === 'normal' ? 'draw' : 'guess')
+        let undoButton = h('button', { type: 'button', disabled: !history.length, onclick: this.undo }, 'undo')
         let divider = h('div', { class: 'divider' })
         let newButton = h('button', { type: 'button', onclick: () => this.setState({ modalOpen: true }) }, 'new')
         let resetButton = h('button', { type: 'button', onclick: this.resetBoard }, 'reset')
         let solveButton = h('button', { type: 'button', onclick: () => this.solve(boardSolution) }, 'solve')
         let controls = h('div', { class: 'button-row', style: boardMargins },
-            [drawModeButton, divider, newButton, resetButton, solveButton]
+            [drawModeButton, undoButton, divider, newButton, resetButton, solveButton]
         )
 
         let board = boardState && h('div', { class: 'board-container', style: { width: boardWidth } },
-            h(Board, { width, height, size, hintsWidth, boardState, updateCell, colHints, rowHints, solvedColHints, solvedRowHints, guessCells, updateGuess, gradient, drawMode })
+            h(Board, { width, height, size, hintsWidth, boardState, updateCell, colHints, rowHints, solvedColHints, solvedRowHints, guessCells, updateGuess, gradient, drawMode, updateHistory })
         )
 
         if (modalOpen) return h(NewGameModal, { onclose: size => size ? this.setupBoard(size, size) : this.setState({ modalOpen: false }) })
@@ -524,14 +546,17 @@ class Board extends Component {
         this.endDraw = (x, y) => {
             pointerIsDown = false
             let cell = this.getCell(x, y)
-
+            
             let drawCell = (x, y) => this.drawCell(x, y, nextValue)
 
             if (cell.x === startCell.x && cell.y === startCell.y) {
+                this.props.updateHistory()
                 this.drawCell(cell.x, cell.y)
             } else if (cell.x === startCell.x) {
+                this.props.updateHistory()
                 this.drawLine(drawCell, cell, true)
             } else if (cell.y === startCell.y) {
+                this.props.updateHistory()
                 this.drawLine(drawCell, cell, false)
             }
 
