@@ -306,9 +306,18 @@ class Main extends Component {
             let tileSize = Math.min(tileWidth, tileHeight)
 
             let size = Math.min(this.maxSize, Math.max(this.minSize, tileSize))
-            let boardWidth = rowTiles * size
 
-            this.setState({ size, boardWidth })
+            let gridWidth = size * this.state.width
+            let leftoverSpace = (window.innerWidth - gridWidth) / 2
+            let hintTiles = maxHoriztonalHints * 0.67 * size
+            let hintsWidth = Math.max(leftoverSpace, hintTiles)
+            let boardWidth = hintsWidth + gridWidth
+
+            let marginLeft = Math.max(0, (leftoverSpace - hintTiles))
+            let marginRight = marginLeft > 0 ? leftoverSpace : (window.innerWidth - boardWidth)
+            let boardMargins = { marginLeft: marginLeft + 'px', marginRight: marginRight + 'px' }
+
+            this.setState({ size, boardWidth, boardMargins, hintsWidth })
         }
 
         this.gradient = () => {
@@ -330,26 +339,46 @@ class Main extends Component {
         this.setupBoard(10, 10)
     }
 
-    render(_, { width, height, size, boardState, boardSolution, boardWidth, colHints, rowHints, solvedColHints, solvedRowHints, guessCells, gradient, solved, drawMode, modalOpen }) {
+    render(_, {
+        width,
+        height,
+        size,
+        boardState,
+        boardSolution,
+        boardWidth,
+        boardMargins,
+        hintsWidth,
+        colHints,
+        rowHints,
+        solvedColHints,
+        solvedRowHints,
+        guessCells,
+        gradient,
+        solved,
+        drawMode,
+        modalOpen
+    }) {
         let updateCell = this.updateCell
         let updateGuess = this.updateGuess
 
-        let title = h('h1', { style: { maxWidth: boardWidth } }, 'tomographical')
+        let title = h('h1', { style: boardMargins }, 'tomographical')
+
         let wiki = h('a', { href: 'https://en.wikipedia.org/wiki/Nonogram', target: 'blank' }, 'WHAT')
         let link = h('a', { href: 'https://github.com/sarahgould/tomographical', target: 'blank' }, 'SOURCE')
         let author = h('a', { href: 'https://zenzoa.com', target: 'blank' }, 'SG 2018')
-        let footer = h('footer', { style: { maxWidth: boardWidth } }, [wiki, ' _ ', link, ' _ ', author])
+        let footer = h('footer', { style: boardMargins }, [wiki, ' _ ', link, ' _ ', author])
 
         let drawModeButton = h('button', { class: 'draw-mode', type: 'button', onclick: this.changeDrawMode }, drawMode === 'normal' ? 'draw' : 'guess')
+        let divider = h('div', { class: 'divider' })
         let newButton = h('button', { type: 'button', onclick: () => this.setState({ modalOpen: true }) }, 'new')
         let resetButton = h('button', { type: 'button', onclick: this.resetBoard }, 'reset')
         let solveButton = h('button', { type: 'button', onclick: () => this.solve(boardSolution) }, 'solve')
-        let controls = h('div', { class: 'button-row', style: { maxWidth: boardWidth } },
-            [drawModeButton, newButton, resetButton, solveButton]
+        let controls = h('div', { class: 'button-row', style: boardMargins },
+            [drawModeButton, divider, newButton, resetButton, solveButton]
         )
 
         let board = boardState && h('div', { class: 'board-container', style: { width: boardWidth } },
-            h(Board, { width, height, size, boardState, updateCell, colHints, rowHints, solvedColHints, solvedRowHints, guessCells, updateGuess, gradient, drawMode })
+            h(Board, { width, height, size, hintsWidth, boardState, updateCell, colHints, rowHints, solvedColHints, solvedRowHints, guessCells, updateGuess, gradient, drawMode })
         )
 
         if (modalOpen) return h(NewGameModal, { onclose: size => size ? this.setupBoard(size, size) : this.setState({ modalOpen: false }) })
@@ -368,7 +397,8 @@ class NewGameModal extends Component {
             h('button', { type: 'button', onclick: () => onclose(10) }, '10x10'),
             h('button', { type: 'button', onclick: () => onclose(15) }, '15x15'),
             h('button', { type: 'button', onclick: () => onclose(20) }, '20x20'),
-            h('button', { type: 'button', onclick: () => onclose(25) }, '25x25')
+            h('button', { type: 'button', onclick: () => onclose(25) }, '25x25'),
+            h('button', { type: 'button', onclick: () => onclose(30) }, '30x30')
         ]
         let divider = h('div', { class: 'divider' })
         let cancelButton = h('button', { type: 'button', onclick: () => onclose(0) }, 'cancel')
@@ -564,7 +594,7 @@ class Board extends Component {
         }
     }
 
-    render({ width, height, size, boardState, colHints, rowHints, solvedColHints, solvedRowHints, guessCells, gradient }, { tempCells }) {
+    render({ width, height, size, hintsWidth, boardState, colHints, rowHints, solvedColHints, solvedRowHints, guessCells, gradient }, { tempCells }) {
         let cell = (x, y, isTemp, tempValue) => {
             let value = boardState[y][x]
             let guessValue = guessCells[y][x]
@@ -582,7 +612,7 @@ class Board extends Component {
                 h('td', null, h(Hints, { size, isCol: true, hints: colHints, solvedHints: solvedColHints, boardState }))
             ]),
             h('tr', null, [
-                h('td', null, h(Hints, { size, isCol: false, hints: rowHints, solvedHints: solvedRowHints, boardState })),
+                h('td', null, h(Hints, { size, hintsWidth, isCol: false, hints: rowHints, solvedHints: solvedRowHints, boardState })),
                 h('td', null, h(Grid, { width, height, size, cell, gradient, tempCells }))
             ])
         ])
@@ -590,9 +620,10 @@ class Board extends Component {
 }
 
 class Hints extends Component {
-    render({ size, isCol, hints, solvedHints }) {
+    render({ size, hintsWidth, isCol, hints, solvedHints }) {
         let contents
         let innerSize = Math.floor(Math.max(12, size * 0.67))
+        let fontSize = Math.floor(Math.min(16, Math.max(10, innerSize - 4)))
 
         if (isCol) {
             contents = h('tr', null, hints.map((hintGroup, i) => {
@@ -600,22 +631,19 @@ class Hints extends Component {
                 return h('td', { style: { width: size + 'px' } }, hintGroup.map((hint, j) => {
                     let hintCompleted = solvedHintsInRow && solvedHintsInRow.includes(j)
                     return h('div', {
-                        class: 'hint ' + (hintCompleted && 'hint-completed'),
-                        style: { height: innerSize + 'px' }
+                        class: 'hint ' + (hintCompleted ? 'hint-completed' : ''),
+                        style: { height: innerSize + 'px', fontSize: fontSize + 'px' }
                     }, hint)
                 }))
             }))
-            hints.map(hintGroup => {
-                return h('tr', null, )
-            })
         } else {
             contents = hints.map((hintGroup, i) => {
                 let solvedHintsInRow = solvedHints && solvedHints[i]
                 return h('tr', null, h('td', { style: { height: size + 'px' } }, hintGroup.map((hint, j) => {
                     let hintCompleted = solvedHintsInRow && solvedHintsInRow.includes(j)
                     return h('div', {
-                        class: 'hint ' + (hintCompleted && 'hint-completed'),
-                        style: { width: innerSize + 'px' }
+                        class: 'hint ' + (hintCompleted ? 'hint-completed' : ''),
+                        style: { width: innerSize + 'px', fontSize: fontSize + 'px' }
                     }, hint)
                 })))
             })
@@ -623,7 +651,8 @@ class Hints extends Component {
 
         return h('div', { class: 'hints-container' },
             h('table', {
-                class: 'hints ' + (isCol ? 'hints-col' : 'hints-row')
+                class: 'hints ' + (isCol ? 'hints-col' : 'hints-row'),
+                style: hintsWidth ? { width: hintsWidth } : null
             }, contents)
         )
     }
