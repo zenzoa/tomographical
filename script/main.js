@@ -401,9 +401,25 @@ class Main extends Component {
             [drawModeButton, undoButton, divider, newButton, resetButton, solveButton]
         )
 
-        let board = boardState && h('div', { class: 'board-container', style: { width: boardWidth } },
-            h(Board, { width, height, size, hintsWidth, boardState, updateCell, colHints, rowHints, solvedColHints, solvedRowHints, guessCells, updateGuess, gradient, drawMode, updateHistory })
-        )
+        let board = boardState &&
+            h(Board, {
+                boardWidth,
+                width,
+                height,
+                size,
+                hintsWidth,
+                boardState,
+                updateCell,
+                colHints,
+                rowHints,
+                solvedColHints,
+                solvedRowHints,
+                guessCells,
+                updateGuess,
+                gradient,
+                drawMode,
+                updateHistory
+            })
 
         if (modalOpen) return h(NewGameModal, { onclose: size => size ? this.setupBoard(size, size) : this.setState({ modalOpen: false }) })
 
@@ -431,10 +447,13 @@ class NewGameModal extends Component {
 }
 
 class Board extends Component {
-    constructor(props) {
+    constructor() {
         super()
 
-        this.state = { tempCells: [] }
+        this.state = {
+            tempCells: [],
+            seqLength: null
+        }
 
         let pointerIsDown = false
         let doubleClickTimeout
@@ -450,7 +469,7 @@ class Board extends Component {
 
         this.inGrid = (x, y) => {
             let grid = this.getGrid()
-            return x >= grid.left && x <= grid.right && y >= grid.top && y <= grid.bottom
+            return x >= grid.left && x < grid.right - 1 && y >= grid.top && y < grid.bottom - 1
         }
 
         this.getCell = (x, y) => {
@@ -459,12 +478,13 @@ class Board extends Component {
             let dy = y - grid.top
             let cellX = Math.floor(dx / this.props.size)
             let cellY = Math.floor(dy / this.props.size)
-
-            return {
-                x: cellX,
-                y: cellY,
-                value: this.props.boardState[cellY][cellX],
-                guess: this.props.guessCells[cellY][cellX]
+            if (cellX < this.props.width && cellY < this.props.height) {
+                return {
+                    x: cellX,
+                    y: cellY,
+                    value: this.props.boardState[cellY][cellX],
+                    guess: this.props.guessCells[cellY][cellX]
+                }
             }
         }
 
@@ -506,21 +526,30 @@ class Board extends Component {
             
             if (this.inGrid(x, y)) {
                 let cell = this.getCell(x, y)
+                if (!cell) return
+
                 let tempCells = []
                 let tempValue = this.props.drawMode === 'normal' ? nextValue : nextGuess
                 let updateTempCells = (x, y) => tempCells.push([x, y, tempValue])
+
+                let seqLength = null
+
                 if (cell.x === startCell.x && cell.y === startCell.y) {
                     return
                 } else if (cell.x === startCell.x) {
-                    this.drawLine(updateTempCells, cell, true)
+                    let length = this.drawLine(updateTempCells, cell, true)
+                    seqLength = { x, y, length }
                 } else if (cell.y === startCell.y) {
-                    this.drawLine(updateTempCells, cell, false)
+                    let length = this.drawLine(updateTempCells, cell, false)
+                    seqLength = { x, y, length }
                 }
-                this.setState({ tempCells })
+
+                this.setState({ tempCells, seqLength })
+                
             } else {
                 pointerIsDown = false
                 startCell = null
-                this.setState({ tempCells: [] })
+                this.setState({ tempCells: [], seqLength: null })
             }
         }
 
@@ -548,8 +577,9 @@ class Board extends Component {
         this.endDraw = (x, y) => {
             pointerIsDown = false
             let cell = this.getCell(x, y)
+            if (!cell) return
             
-            let drawCell = (x, y) => this.drawCell(x, y, nextValue)
+            let drawCell = (x, y) => this.drawCell(x, y)
 
             if (cell.x === startCell.x && cell.y === startCell.y) {
                 this.props.updateHistory()
@@ -563,7 +593,7 @@ class Board extends Component {
             }
 
             startCell = null
-            this.setState({ tempCells: [] })
+            this.setState({ tempCells: [], seqLength: null })
         }
 
         this.drawCell = (x, y) => {
@@ -589,6 +619,9 @@ class Board extends Component {
                 let y = isRow ? i : startCell.y
                 callback(x, y)
             }
+
+            let length = max - min + 1
+            return length
         }
     }
 
@@ -621,7 +654,7 @@ class Board extends Component {
         }
     }
 
-    render({ width, height, size, hintsWidth, boardState, colHints, rowHints, solvedColHints, solvedRowHints, guessCells, gradient }, { tempCells }) {
+    render({ boardWidth, width, height, size, hintsWidth, boardState, colHints, rowHints, solvedColHints, solvedRowHints, guessCells, gradient }, { tempCells, seqLength }) {
         let cell = (x, y, isTemp, tempValue) => {
             let value = boardState[y][x]
             let guessValue = guessCells[y][x]
@@ -633,15 +666,31 @@ class Board extends Component {
             return h('div', { class: classes.join(' ') })
         }
 
-        return h('table', { class: 'board' }, [
-            h('tr', null, [
-                h('td'),
-                h('td', null, h(Hints, { size, isCol: true, hints: colHints, solvedHints: solvedColHints, boardState }))
+        let seqDiv = null
+        if (seqLength) {
+            let seqSize = 12
+            let seqStyle = {
+                width: seqSize * 2 + 'px',
+                height: seqSize * 2 + 'px',
+                left: seqLength.x - seqSize + 'px',
+                top: seqLength.y - (seqSize * 3) + 'px',
+                fontSize: seqSize + 'px'
+            }
+            seqDiv = h('div', { class: 'seq-length', style: seqStyle }, seqLength.length)
+        }
+
+        return h('div', { class: 'board-container', style: { width: boardWidth } }, [
+            h('table', { class: 'board' }, [
+                h('tr', null, [
+                    h('td'),
+                    h('td', null, h(Hints, { size, isCol: true, hints: colHints, solvedHints: solvedColHints, boardState }))
+                ]),
+                h('tr', null, [
+                    h('td', null, h(Hints, { size, hintsWidth, isCol: false, hints: rowHints, solvedHints: solvedRowHints, boardState })),
+                    h('td', null, h(Grid, { width, height, size, cell, gradient, tempCells }))
+                ])
             ]),
-            h('tr', null, [
-                h('td', null, h(Hints, { size, hintsWidth, isCol: false, hints: rowHints, solvedHints: solvedRowHints, boardState })),
-                h('td', null, h(Grid, { width, height, size, cell, gradient, tempCells }))
-            ])
+            seqDiv
         ])
     }
 }

@@ -220,6 +220,21 @@ button:disabled {
     font-size: initial;
 }
 
+.seq-length {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #eee;
+    border-radius: 1px;
+    background: black;
+    font-weight: bold;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
 .modal {
     display: flex;
     flex-direction: column;
