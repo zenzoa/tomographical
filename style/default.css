@@ -195,7 +195,7 @@ button:disabled {
     color: #ccc;
     font-size: 125%;
 }
-.solved .cell-2:after {
+.solved .cell-2:before {
     display: none;
 }
 .cell-temp-0:before,
