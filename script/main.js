@@ -387,7 +387,7 @@ class Main extends Component {
         let title = h('h1', { style: boardMargins }, 'tomographical')
 
         let wiki = h('a', { href: 'https://en.wikipedia.org/wiki/Nonogram', target: 'blank' }, 'WHAT')
-        let link = h('a', { href: 'https://github.com/sarahgould/tomographical', target: 'blank' }, 'SOURCE')
+        let link = h('a', { href: 'https://github.com/zenzoa/tomographical', target: 'blank' }, 'SOURCE')
         let author = h('a', { href: 'https://zenzoa.com', target: 'blank' }, 'SG 2018')
         let footer = h('footer', { style: boardMargins }, [wiki, ' _ ', link, ' _ ', author])
 
