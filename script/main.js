@@ -595,7 +595,11 @@ class Board extends Component {
 
                 let tempCells = []
                 let tempValue = this.props.drawMode === 'normal' ? nextValue : nextGuess
-                let updateTempCells = (x, y) => tempCells.push([x, y, tempValue])
+                let updateTempCells = (x, y) => {
+                    if (this.props.boardState[y][x] === 0) {
+                        tempCells.push([x, y, tempValue])
+                    }
+                }
 
                 let seqLength = null
 
@@ -666,7 +670,7 @@ class Board extends Component {
                 this.props.updateCell(x, y, nextValue)
                 this.props.updateGuess(x, y, 0)
 
-            } else {
+            } else if (this.props.boardState[y][x] === 0) {
                 this.props.updateCell(x, y, 0)
                 this.props.updateGuess(x, y, nextGuess)
             }
