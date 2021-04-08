@@ -114,9 +114,9 @@ class Main extends Component {
 
             }
 
-            for (let i = 0; i < width; i++) {
-                if (Math.random() < 0,5) drawLine()
-                else drawCircle()
+            let iterations = width
+            for (let i = 0; i < iterations; i++) {
+                drawCircle()
             }
 
             return boardSolution.map(row => row.map(cell => cell || 2))
