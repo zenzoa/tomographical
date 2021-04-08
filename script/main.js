@@ -453,7 +453,7 @@ class Main extends Component {
 
         let wiki = h('a', { href: 'https://en.wikipedia.org/wiki/Nonogram', target: 'blank' }, 'WHAT')
         let link = h('a', { href: 'https://github.com/zenzoa/tomographical', target: 'blank' }, 'SOURCE')
-        let author = h('a', { href: 'https://zenzoa.com', target: 'blank' }, 'SG 2018')
+        let author = h('a', { href: 'https://zenzoa.com', target: 'blank' }, 'SG 2021')
         let footer = h('footer', { style: boardMargins }, [wiki, ' _ ', link, ' _ ', author])
 
         let drawModeButton = h('button', { type: 'button', onclick: this.changeDrawMode }, drawMode === 'normal' ? 'draw' : 'guess')
