@@ -42,18 +42,83 @@ class Main extends Component {
 
         this.createSolution = (width, height) => {
             let boardSolution = Array(height).fill(0).map(() => Array(width).fill(null))
-            let numCells = width * height
-            let toBeFilled = Math.floor(numCells * this.state.density)
-            if (toBeFilled > numCells) toBeFilled = numCells
-            let x, y
-            while (toBeFilled) {
-                x = Math.floor(Math.random() * width)
-                y = Math.floor(Math.random() * height)
-                if (boardSolution[y][x] == null) {
+
+            let randomPoint = (max) => Math.floor(Math.random() * max)
+
+            let addPoint = (x, y) => {
+                if (typeof boardSolution[y] !== 'undefined' && typeof boardSolution[y][x] !== 'undefined') {
                     boardSolution[y][x] = 1
-                    toBeFilled--
                 }
             }
+
+            let drawLine = () => { // uses Bresenham's line algorithm
+                let x0 = randomPoint(width)
+                let y0 = randomPoint(height)
+                let x1 = randomPoint(width)
+                let y1 = randomPoint(height)
+
+                let dx = Math.abs(x1 - x0)
+                let sx = x0 < x1 ? 1 : -1
+                let dy = -Math.abs(y1 - y0)
+                let sy = y0 < y1 ? 1 : -1
+                let err = dx + dy
+
+                while (true) {
+                    addPoint(x0, y0)
+                    if (x0 === x1 && y0 === y1) {
+                        break
+                    } else {
+                        let e2 = 2 * err
+                        if (e2 >= dy) {
+                            err += dy
+                            x0 += sx
+                        }
+                        if (e2 <= dx) {
+                            err += dx
+                            y0 += sy
+                        }
+                    }
+                }
+            }
+
+            let drawCircle = () => { // uses Bresenham's circle algorithm
+                let r = Math.max(2, randomPoint(width))
+                let xc = randomPoint(width)
+                let yc = randomPoint(height)
+
+                let drawCircleArc = (xc, yc, x, y) => {
+                    addPoint(xc + x, yc + y)
+                    addPoint(xc - x, yc + y)
+                    addPoint(xc + x, yc - y)
+                    addPoint(xc - x, yc - y)
+                    addPoint(xc + y, yc + x)
+                    addPoint(xc - y, yc + x)
+                    addPoint(xc + y, yc - x)
+                    addPoint(xc - y, yc - x)
+                }
+
+                let x = 0
+                let y = r
+                let d = 3 - 2 * r
+                drawCircleArc(xc, yc, x, y)
+                while (y >= x) {
+                    x++
+                    if (d > 0) {
+                        y--
+                        d = d + 4 * (x - y) + 10
+                    } else {
+                        d = d + 4 * x + 6
+                    }
+                    drawCircleArc(xc, yc, x, y)
+                }
+
+            }
+
+            for (let i = 0; i < width; i++) {
+                if (Math.random() < 0,5) drawLine()
+                else drawCircle()
+            }
+
             return boardSolution.map(row => row.map(cell => cell || 2))
         }
 
