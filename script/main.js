@@ -521,7 +521,9 @@ class Board extends Component {
         }
 
         let pointerIsDown = false
+        let doubleClickTimeout
         let startCell = null
+        let lastCell = null
         let nextValue = 0
         let nextGuess = 0
 
@@ -560,6 +562,23 @@ class Board extends Component {
             e.preventDefault()
 
             this.startDraw(x, y)
+
+            if (doubleClickTimeout) this.doubleClick()
+            else doubleClickTimeout = setTimeout(this.clearDoubleClick, 200)
+            lastCell = startCell
+        }
+
+        this.clearDoubleClick = () => {
+            clearTimeout(doubleClickTimeout)
+            doubleClickTimeout = null
+        }
+
+        this.doubleClick = () => {
+            if (pointerIsDown && lastCell.x === startCell.x && lastCell.y === startCell.y) {
+                nextValue = 2
+                nextGuess = 2
+            }
+            this.clearDoubleClick()
         }
 
         this.pointerMove = (e) => {
@@ -584,11 +603,9 @@ class Board extends Component {
                     return
                 } else if (cell.x === startCell.x) {
                     let length = this.drawLine(updateTempCells, cell, true)
-                    if (length > 1) nextValue = startCell.value > 0 ? 0 : 1
                     seqLength = { x, y, length }
                 } else if (cell.y === startCell.y) {
                     let length = this.drawLine(updateTempCells, cell, false)
-                    if (length > 1) nextValue = startCell.value > 0 ? 0 : 1
                     seqLength = { x, y, length }
                 }
 
@@ -616,10 +633,8 @@ class Board extends Component {
             pointerIsDown = true
 
             let cell = this.getCell(x, y)
-            nextValue = cell.value + 1
-            if (nextValue > 2) nextValue = 0
-            nextGuess = cell.guess + 1
-            if (nextGuess > 2) nextGuess = 0
+            nextValue = cell.value ? 0 : 1
+            nextGuess = cell.guess ? 0 : 1
 
             startCell = cell
         }
